@@ -4,81 +4,130 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection.Emit;
+using System.Reflection;
 using System.Text;
 using UnityEngine;
 
 namespace CiarencesUnbelievableModifications.Patches
 {
-    internal static class CylinderBulletCollector
+    public static class CylinderBulletCollector
     {
-        [HarmonyPatch(typeof(FVRFireArmChamber), nameof(FVRFireArmChamber.EjectRound), new[] { typeof(Vector3), typeof(Vector3), typeof(Vector3), typeof(bool) })]
-        [HarmonyPostfix]
-        private static void PatchChamberEjectRound(FVRFireArmRound __result, FVRFireArmChamber __instance)
+        public static void PlaceRoundIntoHand(FVRFireArmRound round, FVRViveHand hand)
         {
-            if (__instance.Firearm is Revolver revolver)
+            //we don't want spent rounds, I don't even think that they can be palmed
+            if (round.IsSpent)
             {
-                //useless nullcheck, I'm guessing
-                if (revolver.m_hand != null)
-                {
-                    if (revolver.m_hand.OtherHand.CurrentInteractable is RevolverCylinder)
-                    {
-                        revolver.m_hand.OtherHand.ForceSetInteractable(__result);
-                    }
-                if (!__result.IsSpent ||
-                    (__result.IsSpent &&
-                      SettingsManager.configEnableCollectingSpentCartridges.Value == true))
-                    {
-
-                    }
-                }
+                return;
             }
+
+            if (hand.CurrentInteractable is FVRFireArmRound roundInHand)
+            {
+                roundInHand.PalmRound(round, false, true);
+            }
+            else
+            {
+                //do this to prevent the cylinder from rotating a million times, doesn't actually work. Shit.
+                if (hand.CurrentInteractable is FVRInteractiveObject cylinderInteractiveObject) 
+                    cylinderInteractiveObject.EndInteraction(hand);
+
+                //why isn't there a method that does both of those things
+                hand.ForceSetInteractable(round);
+                round.BeginInteraction(hand);
+            }
+        }
+
+        public static bool TryPlaceRoundIntoHand(GameObject revolverGameObject, ref bool flag)
+        {
+            Revolver revolver = revolverGameObject.GetComponent<Revolver>();
+            if (SettingsManager.Verbose) CiarencesUnbelievableModifications.Logger.LogInfo($"Revolver: {revolver}");
+            if (revolver.Cylinder.m_hand != null && revolver.Cylinder.m_hand.Input.TriggerDown)
+            {
+                FVRViveHand hand = revolver.Cylinder.m_hand;
+                for (int k = 0; k < revolver.Chambers.Length; k++)
+                {
+                    var currentChamber = revolver.Chambers[k];
+                    if (currentChamber.IsFull)
+                    {
+                        flag = true;
+                        if (revolver.AngInvert)
+                        {
+                            PlaceRoundIntoHand(currentChamber.EjectRound(currentChamber.transform.position + currentChamber.transform.forward * revolver.Cylinder.CartridgeLength, currentChamber.transform.forward, UnityEngine.Random.onUnitSphere, true), hand);
+                        }
+                        else
+                        {
+                            PlaceRoundIntoHand(currentChamber.EjectRound(currentChamber.transform.position + -currentChamber.transform.forward * revolver.Cylinder.CartridgeLength, -currentChamber.transform.forward, UnityEngine.Random.onUnitSphere, true), hand);
+                        }
+                    }
+
+                }
+                return true;
+            }
+            return false;
         }
 
         [HarmonyPatch(typeof(RevolverCylinder), nameof(RevolverCylinder.UpdateInteraction))]
         [HarmonyPostfix]
         private static void PatchRevolverCylinderUpdateInteraction(ref RevolverCylinder __instance, FVRViveHand hand)
         {
-            if (hand.Input.TriggerDown)
+            //any way I can access the Ejector? I don't want to GetComponent<>()
+            if (hand.Input.TriggerDown && !__instance.Revolver.isCylinderArmLocked)
             {
-                //I DON'T WANT TO TRANSPILEEEEEEEEEEE
-                List<FVRFireArmRound> rounds = new();
-                foreach (FVRFireArmChamber chamber in __instance.Revolver.Chambers)
-                {
-                    if (chamber.GetRound() != null)
-                    {
-                        var round = chamber.GetRound();
-                        if (!round.IsSpent ||
-                            (round.IsSpent &&
-                              SettingsManager.configEnableCollectingSpentCartridges.Value == true))
-                        {
-                            rounds.Add(round);
-                        }
-                    }
-                }
-
                 __instance.Revolver.EjectChambers();
-                __instance.EndInteraction(hand);
-
-                if (rounds.Count == 0)
-                {
-                    return;
-                }
-                for (int i = 0; i < rounds.Count; i++)
-                {
-                    if (i == 0)
-                    {
-                        rounds[0].BeginInteraction(hand);
-                    }
-                    else
-                    {
-                        CiarencesUnbelievableModifications.Logger.LogInfo("yo");
-                        (hand.CurrentInteractable as FVRFireArmRound).PalmRound(rounds[i], false, true);
-                    }
-                }
             }
-            else
+        }
+
+        public static class CylinderBulletCollectorTranspiler
+        {
+            [HarmonyPatch(typeof(Revolver), nameof(Revolver.EjectChambers))]
+            [HarmonyTranspiler]
+            private static IEnumerable<CodeInstruction> TranspileRevolverEjectChambers(IEnumerable<CodeInstruction> instructions, ILGenerator generator, MethodBase __originalMethod)
             {
-                handGrabbingCylinder = null;
+                CodeMatcher codeMatcher = new CodeMatcher(instructions, generator).MatchForward(true,
+                    new CodeMatch(new CodeInstruction(OpCodes.Ldloc_0)),
+                    new CodeMatch(new CodeInstruction(OpCodes.Brfalse))
+                    );
+
+                codeMatcher.CreateLabelAt(codeMatcher.Length - 1, out var labelEnd);
+                codeMatcher.Operand = labelEnd;
+
+                codeMatcher.MatchForward(true,
+                     new CodeMatch(new CodeInstruction(OpCodes.Ldlen)),
+                     new CodeMatch(new CodeInstruction(OpCodes.Conv_I4)),
+                     new CodeMatch(new CodeInstruction(OpCodes.Blt)),
+                     new CodeMatch(new CodeInstruction(OpCodes.Br))
+                     );
+
+                if (!codeMatcher.ReportFailure(__originalMethod, CiarencesUnbelievableModifications.Logger.LogError))
+                {
+                    if (SettingsManager.Verbose) CiarencesUnbelievableModifications.Logger.LogInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
+
+                    codeMatcher
+                        .RemoveInstruction()
+                        .SetAndAdvance(OpCodes.Ldarg_0, null)
+                        .InsertAndAdvance(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Component), "get_gameObject")))
+                        .InsertAndAdvance(new CodeInstruction(OpCodes.Ldloca_S, 0))
+                        .InsertAndAdvance(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CylinderBulletCollector), nameof(CylinderBulletCollector.TryPlaceRoundIntoHand))))
+                        .InsertAndAdvance(new CodeInstruction(OpCodes.Ldc_I4_0))
+                        ;
+
+                    var pos = codeMatcher.Pos;
+
+                    codeMatcher.MatchForward(true,
+                        new CodeMatch(new CodeInstruction(OpCodes.Ldloc_0)),
+                        new CodeMatch(new CodeInstruction(OpCodes.Brfalse))
+                        );
+
+                    codeMatcher.CreateLabelAt(codeMatcher.Pos, out var label);
+
+                    codeMatcher.Advance(pos - codeMatcher.Pos);
+
+                    codeMatcher
+                        .InsertAndAdvance(new CodeInstruction(OpCodes.Brtrue, label))
+                        ;
+                }
+
+                return codeMatcher.InstructionEnumeration();
             }
         }
     }

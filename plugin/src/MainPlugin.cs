@@ -30,7 +30,8 @@ namespace CiarencesUnbelievableModifications
             Harmony.CreateAndPatchAll(typeof(MagRetentionTweaks.MagRetentionTweaksHarmonyFixes));
 
             //another time maybe :)
-            //Harmony.CreateAndPatchAll(typeof(CylinderBulletCollector));
+            Harmony.CreateAndPatchAll(typeof(CylinderBulletCollector));
+            Harmony.CreateAndPatchAll(typeof(CylinderBulletCollector.CylinderBulletCollectorTranspiler));
         }
         
         //Do I really need this? Can't I use Debug.Log? I like Debug.Log :(

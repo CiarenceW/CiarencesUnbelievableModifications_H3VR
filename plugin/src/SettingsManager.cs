@@ -31,7 +31,6 @@ namespace CiarencesUnbelievableModifications
         internal static ConfigEntry<float> configQuickRetainedMagReleaseMaximumHoldTime;
 
         internal static ConfigEntry<bool> configEnableCylinderBulletCollector;
-        internal static ConfigEntry<bool> configEnableCollectingSpentCartridges;
 
         internal static void InitializeAndBindSettings(ConfigFile config)
         {
@@ -76,7 +75,7 @@ namespace CiarencesUnbelievableModifications
 
             configMagRetentionMinimumDotThreshold = config.Bind(magRetentionCatName,
                 "MagRetentionMinimumDotThreshold",
-                0.7f,
+                0.8f,
                 "The closer the value is to 1, the closer the angles of the two magazines must match for the gun's mag to be retained (0 is perpendicular, 1 is exact)");
 
             configMagRetentionMinimumDotThreshold.SettingChanged += (s, e) =>
@@ -94,12 +93,7 @@ namespace CiarencesUnbelievableModifications
             configEnableCylinderBulletCollector = config.Bind(cylinderBulletCollectorCatName,
                 "EnableCylinderBulletCollector",
                 true,
-                "Allows you to eject the cylinder of a revolver by grabbing it and pressing the trigger");
-
-            configEnableCollectingSpentCartridges = config.Bind(cylinderBulletCollectorCatName,
-                "EnableCollectingSpentCartridges",
-                false,
-                "Also palms spent cartridges, useless but, whatever");
+                "Allows you to eject the cylinder of a revolver and keep its unspent rounds by grabbing it and pressing the trigger");
 
             #endregion
         }

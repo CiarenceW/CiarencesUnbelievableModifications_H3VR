@@ -33,7 +33,7 @@ namespace CiarencesUnbelievableModifications.Patches
                         SettingsManager.configEnableQuickRetainedMagReleaseMaximumHoldTime.Value == false;
 
             CiarencesUnbelievableModifications.Logger.LogInfo("Max time enabled: " + SettingsManager.configEnableQuickRetainedMagReleaseMaximumHoldTime.Value);
-            CiarencesUnbelievableModifications.Logger.LogInfo("Time held: " + SettingsManager.configQuickRetainedMagReleaseMaximumHoldTime.Value);
+            CiarencesUnbelievableModifications.Logger.LogInfo("Time held: " + timeTouchpadHeldDown);
             CiarencesUnbelievableModifications.Logger.LogInfo($"thus, heldDownCheck is {heldDownCheck}");
 
             var result = (SettingsManager.configEnableQuickRetainedMagRelease.Value && (streamlined || notstreamlined)) && heldDownCheck;
@@ -88,16 +88,16 @@ namespace CiarencesUnbelievableModifications.Patches
                         .InsertAndAdvance(new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(FVRFireArmMagazine), nameof(FVRFireArmMagazine.m_magChild))))
                         .InsertAndAdvance(new CodeInstruction(OpCodes.Ldnull))
                         .InsertAndAdvance(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(UnityEngine.Object), "op_Inequality", new[] { typeof(UnityEngine.Object), typeof(UnityEngine.Object) })))
-                        //adding a branch here later on. Could do it right here but I'm superstitious.
-
-                        //flag = MagRetentionTweaks.CheckForQuickReleaseEligibility(hand);
-                        .InsertAndAdvance(new CodeInstruction(OpCodes.Ldarg_1))
-                        .InsertAndAdvance(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MagRetentionTweaks), nameof(CheckForQuickReleaseEligibility), new[] { typeof(FVRViveHand) })))
-                        .InsertAndAdvance(new CodeInstruction(OpCodes.Stloc_0))
-                        .CreateLabel(out Label label)
-
-                        .Advance(-3)
-                        .InsertAndAdvance(new CodeInstruction(OpCodes.Brfalse_S, label))
+                  /*->*///adding a branch here later on. Could do it right now but I'm superstitious.
+                  /*|*/
+                  /*|*/ //flag = MagRetentionTweaks.CheckForQuickReleaseEligibility(hand);
+                  /*|*/ .InsertAndAdvance(new CodeInstruction(OpCodes.Ldarg_1))
+                  /*|*/ .InsertAndAdvance(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(MagRetentionTweaks), nameof(CheckForQuickReleaseEligibility), new[] { typeof(FVRViveHand) })))
+                  /*|*/ .InsertAndAdvance(new CodeInstruction(OpCodes.Stloc_0))
+                  /*|*/ .CreateLabel(out Label label)
+                  /*|*/ 
+                  /*|*/ .Advance(-3)
+                  /*<-*/.InsertAndAdvance(new CodeInstruction(OpCodes.Brfalse_S, label))
                         ;
                 }
 
