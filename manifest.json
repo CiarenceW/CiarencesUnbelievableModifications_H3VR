@@ -1,9 +1,8 @@
 {
-    "name": "{{NAME}}",
-    "author": "{{AUTHOR}}",
-    "version_number": "{{VERSION}}",
-    "description": "{{DESCRIPTION}}",
-    "website_url": "{{URL}}",
+    "name": "CiarencesUnbelievableModifications",
+    "version_number": "1.0.0",
+    "website_url": "https://github.com/CiarenceW/CiarenceUnbelievableModifications_H3VR",
+    "description": "Adds a bunch of cool QoL + fun changes to spice up your H3VR experience.",
     "dependencies": [
         "BepInEx-BepInExPack_H3VR-5.4.1700"
     ]
