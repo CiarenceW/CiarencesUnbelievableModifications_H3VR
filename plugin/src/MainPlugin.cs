@@ -29,11 +29,15 @@ namespace CiarencesUnbelievableModifications
             Harmony.CreateAndPatchAll(typeof(MagRetentionTweaks.MagRetentionTweaksTranspilers));
             Harmony.CreateAndPatchAll(typeof(MagRetentionTweaks.MagRetentionTweaksHarmonyFixes));
 
-            //another time maybe :)
             Harmony.CreateAndPatchAll(typeof(CylinderBulletCollector));
             Harmony.CreateAndPatchAll(typeof(CylinderBulletCollector.CylinderBulletCollectorTranspiler));
+
+            Harmony.CreateAndPatchAll(typeof(BoltHandleLockSoundTweaks));
+            Harmony.CreateAndPatchAll(typeof(BoltHandleLockSoundTweaks.Transpilers));
+
+            Harmony.CreateAndPatchAll(typeof(ReverseMagHoldPos));
         }
-        
+
         //Do I really need this? Can't I use Debug.Log? I like Debug.Log :(
         internal new static ManualLogSource Logger { get; private set; }
     }

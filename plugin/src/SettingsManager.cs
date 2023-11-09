@@ -7,14 +7,20 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using HarmonyLib;
+using CiarencesUnbelievableModifications.MonoBehaviours;
+using FistVR;
 
 namespace CiarencesUnbelievableModifications
 {
     internal static class SettingsManager
     {
         const string debugCatName = "Debug";
+
         const string magRetentionCatName = "Magazine Retention";
         const string cylinderBulletCollectorCatName = "Cylinder Bullet Collector";
+        const string reverseMagHoldPosCatName = "Reverse Magazine Hold";
+        const string boltHandleSoundTweaksCatName = "Bolt Handle Sounds";
+        const string reverseMagHoldOffset = reverseMagHoldPosCatName + " | Custom Offsets";
 
         internal static bool Verbose
         {
@@ -32,8 +38,19 @@ namespace CiarencesUnbelievableModifications
 
         internal static ConfigEntry<bool> configEnableCylinderBulletCollector;
 
+        internal static ConfigEntry<bool> configEnableReverseMagHold;
+        internal static ConfigEntry<float> configReverseMagGrabMinDotProduct;
+        internal static ConfigEntry<float> configReverseMagHoldPositionDistance;
+        internal static ConfigEntry<bool> configReverseMagHoldHandgunOnly;
+
+        internal static ConfigEntry<bool> configForceSilenceHitLock;
+
+        internal static ConfigFile configFile;
+
         internal static void InitializeAndBindSettings(ConfigFile config)
         {
+            configFile = config;
+
             configVerbose = config.Bind(debugCatName,
                 "EnableVerbose",
                 false,
@@ -96,6 +113,54 @@ namespace CiarencesUnbelievableModifications
                 "Allows you to eject the cylinder of a revolver and keep its unspent rounds by grabbing it and pressing the trigger");
 
             #endregion
+
+            #region ReverseMagHoldPos
+
+            configEnableReverseMagHold = config.Bind(reverseMagHoldPosCatName,
+                "EnableReverseMagHold",
+                true,
+                "Allows you to grab a magazine upside-down");
+
+            configReverseMagGrabMinDotProduct = config.Bind(reverseMagHoldPosCatName,
+                "ReverseMagHoldMinDotProduct",
+                0.4f,
+                "The minimum difference between the hand and the magazine for the magazine to be grabbed upside-down (a value of 1 means disabled)");
+
+            configReverseMagHoldPositionDistance = config.Bind(reverseMagHoldPosCatName,
+                "ReverseMagHoldPositionDistance",
+                0.15f,
+                "The offset between the center of your hand and the magazine's reversed position");
+
+            configReverseMagHoldHandgunOnly = config.Bind(reverseMagHoldPosCatName,
+                "ReverseMagHoldHandgunOnly",
+                false,
+                "Only allow handgun magazines to be held upside down");
+
+            configReverseMagHoldPositionDistance.SettingChanged += (s, e) =>
+            {
+                var magPoseExtenders = UnityEngine.Object.FindObjectsOfType<FVRMagazinePoseExtender>();
+
+                foreach (FVRMagazinePoseExtender magPoseExtender in magPoseExtenders)
+                {
+                    magPoseExtender.OffsetReverseHoldingPose();
+                }
+            };
+
+            #endregion
+
+            #region BoltHandleLockSoundTweaks
+
+            configForceSilenceHitLock = config.Bind(boltHandleSoundTweaksCatName,
+                "ForceSilenceHitLock",
+                false,
+                "Mutes the Handle Forward sound when the rotation charging handle is locked");
+
+            #endregion
+        }
+
+        internal static ConfigEntry<float> BindMagazineOffset(FVRFireArmMagazine magazine)
+        {
+            return configFile.Bind(reverseMagHoldOffset, magazine.ObjectWrapper.ItemID, 0f);
         }
     }
 }

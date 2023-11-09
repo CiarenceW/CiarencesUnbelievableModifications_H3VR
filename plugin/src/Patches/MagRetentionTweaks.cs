@@ -32,9 +32,12 @@ namespace CiarencesUnbelievableModifications.Patches
                     (timeTouchpadHeldDown >= SettingsManager.configQuickRetainedMagReleaseMaximumHoldTime.Value)) ||
                         SettingsManager.configEnableQuickRetainedMagReleaseMaximumHoldTime.Value == false;
 
-            CiarencesUnbelievableModifications.Logger.LogInfo("Max time enabled: " + SettingsManager.configEnableQuickRetainedMagReleaseMaximumHoldTime.Value);
-            CiarencesUnbelievableModifications.Logger.LogInfo("Time held: " + timeTouchpadHeldDown);
-            CiarencesUnbelievableModifications.Logger.LogInfo($"thus, heldDownCheck is {heldDownCheck}");
+            if (SettingsManager.Verbose)
+            {
+                CiarencesUnbelievableModifications.Logger.LogInfo("Max time enabled: " + SettingsManager.configEnableQuickRetainedMagReleaseMaximumHoldTime.Value);
+                CiarencesUnbelievableModifications.Logger.LogInfo("Time held: " + timeTouchpadHeldDown);
+                CiarencesUnbelievableModifications.Logger.LogInfo($"thus, heldDownCheck is {heldDownCheck}");
+            }
 
             var result = (SettingsManager.configEnableQuickRetainedMagRelease.Value && (streamlined || notstreamlined)) && heldDownCheck;
             return result;
@@ -50,7 +53,7 @@ namespace CiarencesUnbelievableModifications.Patches
                 {
                     timeTouchpadHeldDown += Time.deltaTime;
                 }
-                else if (!hand.IsInStreamlinedMode && hand.Input.TouchpadPressed)
+                else if (!hand.IsInStreamlinedMode && hand.Input.TouchpadDown && Vector2.Angle(hand.Input.TouchpadAxes, Vector2.down) < 55f)
                 {
                     timeTouchpadHeldDown += Time.deltaTime;
                 }

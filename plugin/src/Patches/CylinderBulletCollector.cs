@@ -59,7 +59,6 @@ namespace CiarencesUnbelievableModifications.Patches
                             PlaceRoundIntoHand(currentChamber.EjectRound(currentChamber.transform.position + -currentChamber.transform.forward * revolver.Cylinder.CartridgeLength, -currentChamber.transform.forward, UnityEngine.Random.onUnitSphere, true), hand);
                         }
                     }
-
                 }
                 return true;
             }
@@ -70,10 +69,17 @@ namespace CiarencesUnbelievableModifications.Patches
         [HarmonyPostfix]
         private static void PatchRevolverCylinderUpdateInteraction(ref RevolverCylinder __instance, FVRViveHand hand)
         {
-            //any way I can access the Ejector? I don't want to GetComponent<>()
             if (hand.Input.TriggerDown && !__instance.Revolver.isCylinderArmLocked)
             {
-                __instance.Revolver.EjectChambers();
+                var ejector = __instance.Revolver.GetComponentInChildren<RevolverEjector>(); //I hate having to use this but I really want the ejector animation
+                if (ejector != null)
+                {
+                    ejector.SimpleInteraction(hand);
+                }
+                else
+                {
+                    __instance.Revolver.EjectChambers();
+                }
             }
         }
 
