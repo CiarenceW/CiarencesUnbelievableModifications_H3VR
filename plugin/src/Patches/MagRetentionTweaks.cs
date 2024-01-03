@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Reflection.Emit;
 using System.Reflection;
-using System.Text;
 using FistVR;
 using HarmonyLib;
 using UnityEngine;
+using CiarencesUnbelievableModifications.MonoBehaviours;
 
 namespace CiarencesUnbelievableModifications.Patches
 {
@@ -32,12 +30,9 @@ namespace CiarencesUnbelievableModifications.Patches
                     (timeTouchpadHeldDown >= SettingsManager.configQuickRetainedMagReleaseMaximumHoldTime.Value)) ||
                         SettingsManager.configEnableQuickRetainedMagReleaseMaximumHoldTime.Value == false;
 
-            if (SettingsManager.Verbose)
-            {
-                CiarencesUnbelievableModifications.Logger.LogInfo("Max time enabled: " + SettingsManager.configEnableQuickRetainedMagReleaseMaximumHoldTime.Value);
-                CiarencesUnbelievableModifications.Logger.LogInfo("Time held: " + timeTouchpadHeldDown);
-                CiarencesUnbelievableModifications.Logger.LogInfo($"thus, heldDownCheck is {heldDownCheck}");
-            }
+            SettingsManager.LogVerboseInfo("Max time enabled: " + SettingsManager.configEnableQuickRetainedMagReleaseMaximumHoldTime.Value);
+            SettingsManager.LogVerboseInfo("Time held: " + timeTouchpadHeldDown);
+            SettingsManager.LogVerboseInfo($"thus, heldDownCheck is {heldDownCheck}");
 
             var result = (SettingsManager.configEnableQuickRetainedMagRelease.Value && (streamlined || notstreamlined)) && heldDownCheck;
             return result;
@@ -82,7 +77,7 @@ namespace CiarencesUnbelievableModifications.Patches
                     );
                 if (!codeMatcher.ReportFailure(__originalMethod, CiarencesUnbelievableModifications.Logger.LogError))
                 {
-                    if (SettingsManager.Verbose) CiarencesUnbelievableModifications.Logger.LogInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
+                    SettingsManager.LogVerboseInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
 
                     codeMatcher
                         .Advance(1)
@@ -126,7 +121,7 @@ namespace CiarencesUnbelievableModifications.Patches
 
                 if (!codeMatcher.ReportFailure(__originalMethod, CiarencesUnbelievableModifications.Logger.LogError))
                 {
-                    if (SettingsManager.Verbose) CiarencesUnbelievableModifications.Logger.LogInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
+                    SettingsManager.LogVerboseInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
 
                     codeMatcher.SetAndAdvance(OpCodes.Ldsfld, AccessTools.Field(typeof(MagRetentionTweaks), nameof(magRetentionMinimumDistanceThreshold)));
                     //thanks Szikaka (we copy the label of the current branch...)
@@ -154,6 +149,58 @@ namespace CiarencesUnbelievableModifications.Patches
                         ;
                 }
                 return codeMatcher.InstructionEnumeration();
+            }
+        }
+
+        internal static class MagPalmKeepOffsetPatch
+        {
+            internal static class MagPalmKeepOffsetHarmonyPatches
+            {
+                [HarmonyPatch(typeof(FVRFireArmMagazine), nameof(FVRFireArmMagazine.SetMagParent))]
+                [HarmonyPostfix]
+                private static void PatchSetMagParent(FVRFireArmMagazine __instance, FVRFireArmMagazine magParent)
+                {
+                    if (magParent != null)
+                    {
+                        var magPoseExtender = __instance.GetComponent<FVRMagazinePoseExtender>();
+                        magPoseExtender.relativeForward = magParent.transform.InverseTransformDirection(__instance.transform.forward);
+                        magPoseExtender.relativeUp = magParent.transform.InverseTransformDirection(__instance.transform.up); //bitch
+                    }
+                }
+            }
+
+            internal static class MagPalmKeepOffsetTranspilers
+            {
+                [HarmonyPatch(typeof(FVRFireArmMagazine), nameof(FVRFireArmMagazine.FVRFixedUpdate))]
+                [HarmonyTranspiler]
+                private static IEnumerable<CodeInstruction> TranspilePalmedMagazineRotation(IEnumerable<CodeInstruction> instructions, ILGenerator generator, MethodBase __originalMethod)
+                {
+                    CodeMatcher codeMatcher = new CodeMatcher(instructions, generator).MatchForward(false,
+                    new CodeMatch(OpCodes.Ldarg_0),
+                    new CodeMatch(OpCodes.Ldarg_0),
+                    new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(FVRFireArmMagazine), nameof(FVRFireArmMagazine.m_magParent))),
+                    new CodeMatch(OpCodes.Callvirt, AccessTools.Method(typeof(Component), "get_transform")),
+                    new CodeMatch(OpCodes.Callvirt, AccessTools.Method(typeof(Transform), "get_rotation")),
+                    new CodeMatch(OpCodes.Call, AccessTools.Method(typeof(FVRPhysicalObject), "set_PivotLockRot"))
+                    );
+
+                    if (!codeMatcher.ReportFailure(__originalMethod, CiarencesUnbelievableModifications.Logger.LogError))
+                    {
+                        SettingsManager.LogVerboseInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
+
+                        //removes the right hand assignment for the PivotLockRot, replaces it FVRMagazinePoseExtender.GetRotation (less fucking transpiling to do)
+                        codeMatcher
+                            .RemoveInstructions(5)
+                            .InsertAndAdvance(
+                            new CodeInstruction(OpCodes.Ldarg_0),
+                            new CodeInstruction(OpCodes.Ldarg_0),
+                            new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Component), nameof(Component.GetComponent), null, new[] { typeof(FVRMagazinePoseExtender) })),
+                            new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(FVRMagazinePoseExtender), nameof(FVRMagazinePoseExtender.GetRotation)))
+                            )
+                            ;
+                    }
+                    return codeMatcher.InstructionEnumeration();
+                }
             }
         }
     }

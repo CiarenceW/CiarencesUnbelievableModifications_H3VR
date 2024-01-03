@@ -1,6 +1,5 @@
 ﻿using FistVR;
 using UnityEngine;
-using Valve.VR.InteractionSystem;
 
 namespace CiarencesUnbelievableModifications.MonoBehaviours
 {
@@ -12,11 +11,12 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
             Reversed
         }
 
+        public Vector3 relativeUp = Vector3.zero;
+        public Vector3 relativeForward = Vector3.zero;
+
         public static float distance_down = SettingsManager.configReverseMagHoldPositionDistance.Value;
 
         public float distance_override = 0f;
-
-        public static ControlMode CMode;
 
         public Transform basePoseOverride;
         public Transform reversePoseOverride;
@@ -34,6 +34,8 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
         {
             magazine = GetComponent<FVRFireArmMagazine>();
 
+            if (magazine.ObjectWrapper == null || magazine.IsIntegrated) Destroy(this); //I think it's for shotguns
+
             distance_override = SettingsManager.BindMagazineOffset(magazine).Value; //assign (if it exists) persistent data
 
             CreateTransforms();
@@ -42,6 +44,12 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
         public void CreateTransforms()
         {
             if (magazine == null) magazine = GetComponent<FVRFireArmMagazine>();
+
+            if (GM.CurrentMovementManager.Hands[0] == null) return; //what why would this happen, huh? what? what the fuck dude, this is fucked!!!!!!!!! I mean it hasn't but I'm getting mad thinking about the prospect of it happening
+
+            var CMode = GM.CurrentMovementManager.Hands[0].CMode;
+
+            //too lazy to make it better
             if ((CMode == ControlMode.Oculus || CMode == ControlMode.Index) && magazine.PoseOverride_Touch != null)
             {
                 if (!transform.Find("basePoseOverride"))
@@ -63,7 +71,7 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
                     reversePoseOverride.localRotation = Quaternion.Inverse(magazine.PoseOverride_Touch.localRotation);
                     var reversePoseLocalRot = reversePoseOverride.localEulerAngles;
                     reversePoseLocalRot.y -= 180f;
-                    if (SettingsManager.Verbose) CiarencesUnbelievableModifications.Logger.LogInfo($"{reversePoseOverride.localEulerAngles} -> {reversePoseLocalRot}");
+                    SettingsManager.LogVerboseInfo($"{reversePoseOverride.localEulerAngles} -> {reversePoseLocalRot}");
                     reversePoseOverride.localEulerAngles = reversePoseLocalRot;
                 }
 
@@ -88,7 +96,7 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
                     reverseQBPoseOverride.localRotation = Quaternion.Inverse(magazine.QBPoseOverride.localRotation);
                     var reverseQBPoseLocalRot = reverseQBPoseOverride.localEulerAngles;
                     reverseQBPoseLocalRot.z -= 180f;
-                    if (SettingsManager.Verbose) CiarencesUnbelievableModifications.Logger.LogInfo($"{reverseQBPoseOverride.localEulerAngles} -> {reverseQBPoseLocalRot}");
+                    SettingsManager.LogVerboseInfo($"{reverseQBPoseOverride.localEulerAngles} -> {reverseQBPoseLocalRot}");
                     reverseQBPoseOverride.localEulerAngles = reverseQBPoseLocalRot;
                 }
             }
@@ -115,7 +123,7 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
                     reversePoseOverride.localRotation = Quaternion.Inverse(magazine.PoseOverride.localRotation);
                     var reversePoseLocalRot = reversePoseOverride.localEulerAngles;
                     reversePoseLocalRot.y -= 180f;
-                    if (SettingsManager.Verbose) CiarencesUnbelievableModifications.Logger.LogInfo($"{reversePoseOverride.localEulerAngles} -> {reversePoseLocalRot}");
+                    SettingsManager.LogVerboseInfo($"{reversePoseOverride.localEulerAngles} -> {reversePoseLocalRot}");
                     reversePoseOverride.localEulerAngles = reversePoseLocalRot;
                 }
 
@@ -140,7 +148,7 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
                     reverseQBPoseOverride.localRotation = Quaternion.Inverse(magazine.QBPoseOverride.localRotation);
                     var reverseQBPoseLocalRot = reverseQBPoseOverride.localEulerAngles;
                     reverseQBPoseLocalRot.z -= 180f;
-                    if (SettingsManager.Verbose) CiarencesUnbelievableModifications.Logger.LogInfo($"{reverseQBPoseOverride.localEulerAngles} -> {reverseQBPoseLocalRot}");
+                    SettingsManager.LogVerboseInfo($"{reverseQBPoseOverride.localEulerAngles} -> {reverseQBPoseLocalRot}");
                     reverseQBPoseOverride.localEulerAngles = reverseQBPoseLocalRot;
                 }
             }
@@ -168,7 +176,7 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
             }
         }
 
-        private void FixedUpdate()
+        public void FU()
         {
             lerpProgress += Time.deltaTime * 6f;
             if (basePoseOverride == null || reversePoseOverride == null || baseQBPoseOverride == null || reverseQBPoseOverride == null) return;
@@ -189,5 +197,18 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
                 magazine.QBPoseOverride.localRotation = Quaternion.Lerp(baseQBPoseOverride.localRotation, reverseQBPoseOverride.localRotation, lerpProgress);
             }
         }
+
+        //this is for the KeepPalmedMagRot transpiler, while we were experimenting with stuff, but now it's easier for the config
+        public Quaternion GetRotation()
+        {
+            if (SettingsManager.configEnableMagPalmKeepOffset.Value)
+            {
+                return Quaternion.LookRotation(magazine.m_magParent.transform.TransformDirection(relativeForward), magazine.m_magParent.transform.TransformDirection(relativeUp)); //Szikaka I love you
+            }
+            else
+            {
+                return magazine.m_magParent.transform.rotation;
+            }
+        }   
     }
 }

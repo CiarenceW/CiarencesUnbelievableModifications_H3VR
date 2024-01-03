@@ -15,7 +15,7 @@ namespace CiarencesUnbelievableModifications.Patches
             {
                 handleAudioEventType = FirearmAudioEventType.HandleUp;
             }
-            if (SettingsManager.Verbose) CiarencesUnbelievableModifications.Logger.LogInfo(handleAudioEventType);
+            SettingsManager.LogVerboseInfo(handleAudioEventType);
             return handleAudioEventType;
         }
 
@@ -33,7 +33,7 @@ namespace CiarencesUnbelievableModifications.Patches
 
                 if (TranspilerHelper.TryMatchForward(true, instructions, generator, out var codeMatcher, __originalMethod, CiarencesUnbelievableModifications.Logger.LogError, matches))
                 {
-                    if (SettingsManager.Verbose) CiarencesUnbelievableModifications.Logger.LogInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
+                    SettingsManager.LogVerboseInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
 
                     codeMatcher
                         .SetInstructionAndAdvance(new CodeInstruction(OpCodes.Ldarg_0))
@@ -58,7 +58,7 @@ namespace CiarencesUnbelievableModifications.Patches
 
                 if (TranspilerHelper.TryMatchForward(false, instructions, generator, out var codeMatcher, __originalMethod, CiarencesUnbelievableModifications.Logger.LogError, matches))
                 {
-                    if (SettingsManager.Verbose) CiarencesUnbelievableModifications.Logger.LogInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
+                    SettingsManager.LogVerboseInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
 
                     codeMatcher
                         .InsertAndAdvance(new CodeInstruction(OpCodes.Ldarg_0))

@@ -1,6 +1,7 @@
 ﻿using BepInEx;
 using BepInEx.Logging;
 using CiarencesUnbelievableModifications.Patches;
+using FistVR;
 using HarmonyLib;
 
 namespace CiarencesUnbelievableModifications
@@ -36,6 +37,17 @@ namespace CiarencesUnbelievableModifications
             Harmony.CreateAndPatchAll(typeof(BoltHandleLockSoundTweaks.Transpilers));
 
             Harmony.CreateAndPatchAll(typeof(ReverseMagHoldPos));
+
+            Harmony.CreateAndPatchAll(typeof(MagRetentionTweaks.MagPalmKeepOffsetPatch.MagPalmKeepOffsetHarmonyPatches));
+            Harmony.CreateAndPatchAll(typeof(MagRetentionTweaks.MagPalmKeepOffsetPatch.MagPalmKeepOffsetTranspilers));
+
+            Harmony.CreateAndPatchAll(typeof(FireArmTweaks.SpawnStockTweaks));
+            Harmony.CreateAndPatchAll(typeof(FireArmTweaks.BitchDontTouchMyGun));
+
+            Harmony.CreateAndPatchAll(typeof(InstitutionPreviewReenabler));
+
+            Harmony.CreateAndPatchAll(typeof(CompetitiveShellGrabbing.Patches));
+            Harmony.CreateAndPatchAll(typeof(CompetitiveShellGrabbing.Transpilers));
         }
 
         //Do I really need this? Can't I use Debug.Log? I like Debug.Log :(

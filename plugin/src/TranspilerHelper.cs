@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace CiarencesUnbelievableModifications
 {
-    public class TranspilerHelper
+    public static class TranspilerHelper
     {
         public static bool TryMatchForward(bool useEnd, IEnumerable<CodeInstruction> instructions, ILGenerator generator, out CodeMatcher codeMatcher, MethodBase __originalMethod, Action<string> logger = null, params CodeMatch[] codeMatches)
         {
@@ -17,6 +17,22 @@ namespace CiarencesUnbelievableModifications
 
             if (logger == null) logger = Debug.LogError;
             return (!codeMatcher.ReportFailure(__originalMethod, logger));
+        }
+
+        public static bool TryMatchForward(this CodeMatcher codeMatcher, bool useEnd, MethodBase __originalMethod, params CodeMatch[] codeMatches)
+        {
+            codeMatcher.MatchForward(useEnd, codeMatches);
+
+            return (!codeMatcher.ReportFailure(__originalMethod, CiarencesUnbelievableModifications.Logger.LogError));
+        }
+
+        public static void Print(this CodeMatcher codeMatcher)
+        {
+            var instructs = codeMatcher.Instructions().ToArray();
+            for (int i = 0; i < instructs.Length; i++)
+            {
+                CiarencesUnbelievableModifications.Logger.LogInfo(instructs[i].ToString());
+            }
         }
     }
 }

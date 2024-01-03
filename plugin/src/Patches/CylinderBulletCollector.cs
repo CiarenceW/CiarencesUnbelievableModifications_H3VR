@@ -1,12 +1,8 @@
 ﻿using FistVR;
 using HarmonyLib;
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Reflection.Emit;
 using System.Reflection;
-using System.Text;
 using UnityEngine;
 
 namespace CiarencesUnbelievableModifications.Patches
@@ -40,7 +36,7 @@ namespace CiarencesUnbelievableModifications.Patches
         public static bool TryPlaceRoundIntoHand(GameObject revolverGameObject, ref bool flag)
         {
             Revolver revolver = revolverGameObject.GetComponent<Revolver>();
-            if (SettingsManager.Verbose) CiarencesUnbelievableModifications.Logger.LogInfo($"Revolver: {revolver}");
+            SettingsManager.LogVerboseInfo($"Revolver: {revolver}");
             if (revolver.Cylinder.m_hand != null && revolver.Cylinder.m_hand.Input.TriggerDown)
             {
                 FVRViveHand hand = revolver.Cylinder.m_hand;
@@ -71,8 +67,7 @@ namespace CiarencesUnbelievableModifications.Patches
         {
             if (hand.Input.TriggerDown && !__instance.Revolver.isCylinderArmLocked)
             {
-                var ejector = __instance.Revolver.GetComponentInChildren<RevolverEjector>(); //I hate having to use this but I really want the ejector animation
-                if (ejector != null)
+                if (__instance.TryGetComponentInChildren<RevolverEjector>(out var ejector)) //I hate having to do this less now
                 {
                     ejector.SimpleInteraction(hand);
                 }
@@ -106,7 +101,7 @@ namespace CiarencesUnbelievableModifications.Patches
 
                 if (!codeMatcher.ReportFailure(__originalMethod, CiarencesUnbelievableModifications.Logger.LogError))
                 {
-                    if (SettingsManager.Verbose) CiarencesUnbelievableModifications.Logger.LogInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
+                    SettingsManager.LogVerboseInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
 
                     codeMatcher
                         .RemoveInstruction()
