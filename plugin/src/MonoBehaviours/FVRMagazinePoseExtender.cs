@@ -203,6 +203,7 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
         {
             if (SettingsManager.configEnableMagPalmKeepOffset.Value)
             {
+                //Szikaka I love you
                 return Quaternion.LookRotation(magazine.m_magParent.transform.TransformDirection(relativeForward), magazine.m_magParent.transform.TransformDirection(relativeUp)); //Szikaka I love you
             }
             else

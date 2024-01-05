@@ -160,6 +160,7 @@ namespace CiarencesUnbelievableModifications.Patches
                 [HarmonyPostfix]
                 private static void PatchSetMagParent(FVRFireArmMagazine __instance, FVRFireArmMagazine magParent)
                 {
+                    //Szikaka magic
                     if (magParent != null)
                     {
                         var magPoseExtender = __instance.GetComponent<FVRMagazinePoseExtender>();

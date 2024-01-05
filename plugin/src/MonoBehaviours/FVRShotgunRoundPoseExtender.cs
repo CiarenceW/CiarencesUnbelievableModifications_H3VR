@@ -7,6 +7,7 @@ using UnityEngine;
 
 namespace CiarencesUnbelievableModifications.MonoBehaviours
 {
+    //TODO: try using the IsPivotLocked property instead of making new transforms (more stable?) (less shit?) (fuck?)
     public class FVRShotgunRoundPoseExtender : MonoBehaviour
     {
         public FVRFireArmRound shotgunShell;

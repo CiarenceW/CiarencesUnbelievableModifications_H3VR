@@ -6,6 +6,7 @@ using HarmonyLib;
 
 namespace CiarencesUnbelievableModifications.Patches
 {
+    //OG idea by jackfoxtrot on insta
     public static class BoltHandleLockSoundTweaks
     {
         public static FirearmAudioEventType GetHandleLockSound(ClosedBoltWeapon weapon)

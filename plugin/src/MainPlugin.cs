@@ -46,8 +46,8 @@ namespace CiarencesUnbelievableModifications
 
             Harmony.CreateAndPatchAll(typeof(InstitutionPreviewReenabler));
 
-            Harmony.CreateAndPatchAll(typeof(CompetitiveShellGrabbing.Patches));
-            Harmony.CreateAndPatchAll(typeof(CompetitiveShellGrabbing.Transpilers));
+            //Harmony.CreateAndPatchAll(typeof(CompetitiveShellGrabbing.Patches));
+            //Harmony.CreateAndPatchAll(typeof(CompetitiveShellGrabbing.Transpilers));
         }
 
         //Do I really need this? Can't I use Debug.Log? I like Debug.Log :(

@@ -8,6 +8,7 @@ using CiarencesUnbelievableModifications.MonoBehaviours;
 
 namespace CiarencesUnbelievableModifications.Patches
 {
+    //I'm about to fucking die
     public static class CompetitiveShellGrabbing
     {
         public static Vector3 CalculateShellPositions(Vector3 basePos, Vector3 baseRadius, Transform transform, int j)
