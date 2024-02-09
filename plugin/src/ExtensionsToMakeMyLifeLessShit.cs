@@ -9,6 +9,11 @@ namespace CiarencesUnbelievableModifications
             return (result = component.GetComponent<T>()) != null; //wow!!!! all that in one line!!! cool right?
         }
 
+        public static bool TryGetComponent<T>(this GameObject go, out T result) where T : Component
+        {
+            return (result = go.GetComponent<T>()) != null; //wow!!!! all that in one line!!! cool right?
+        }
+
         public static bool TryGetComponentInParent<T>(this Component component, out T result) where T : Component
         {
             return (result = component.GetComponentInParent<T>()) != null;
@@ -17,6 +22,41 @@ namespace CiarencesUnbelievableModifications
         public static bool TryGetComponentInChildren<T>(this Component component, out T result) where T: Component
         {
             return (result = component.GetComponentInChildren<T>()) != null;
+        }
+
+        public static bool TryFind(this Transform transform, string path, out Transform outTransform)
+        {
+            return (outTransform = transform.Find(path)) != null;
+        }
+
+        public static bool HasComponent<T>(this Transform transform) where T : Component
+        {
+            return transform.GetComponent<T>() != null;
+        }
+
+        public static bool HasComponent<T>(this Component component) where T : Component
+        {
+            return component.GetComponent<T>() != null;
+        }
+
+        public static T AddComponent<T>(this Transform transform) where T : Component
+        {
+            return transform.gameObject.AddComponent<T>();
+        }
+
+        public static T AddComponent<T>(this Component component) where T : Component
+        {
+            return component.gameObject.AddComponent<T>();
+        }
+
+        public static T GetOrAddComponent<T>(this Transform transform) where T : Component
+        {
+            return (transform.TryGetComponent<T>(out var result)) ? result : transform.AddComponent<T>();
+        }
+
+        public static T GetOrAddComponent<T>(this Component component) where T : Component
+        {
+            return (component.TryGetComponent<T>(out var result)) ? result : component.AddComponent<T>();
         }
     }
 }

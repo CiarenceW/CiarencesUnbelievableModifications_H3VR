@@ -12,6 +12,9 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
     {
         public FVRFireArmRound shotgunShell;
 
+        public bool shouldPez;
+        public bool hasAncestor;
+
         private Transform basePoseOverride;
         private Transform competitivePoseOverride;
 
@@ -27,13 +30,14 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
 
         public void SwitchTransform(bool forceOff = false)
         {
-            if (SettingsManager.configEnableCompetitiveShellGrabbing.Value)
+            if (SettingsManager.configEnableCompetitiveShellGrabbing.Value && competitivePoseOverride != null && competitiveQBPoseOverride != null)
             {
                 shotgunShell.PoseOverride = competitivePoseOverride;
                 shotgunShell.QBPoseOverride = competitiveQBPoseOverride;
             }
             else
             {
+                if (basePoseOverride == null) return;
                 shotgunShell.PoseOverride = basePoseOverride;
                 shotgunShell.QBPoseOverride = baseQBPoseOverride;
             }
@@ -51,6 +55,7 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
             if (baseQBPoseOverride == null)
             {
                 baseQBPoseOverride = new GameObject("baseQBPoseOverride").transform;
+                baseQBPoseOverride.parent = shotgunShell.QBPoseOverride.parent;
                 baseQBPoseOverride.localPosition = shotgunShell.QBPoseOverride.localPosition;
                 baseQBPoseOverride.localRotation = shotgunShell.QBPoseOverride.localRotation;
             }
@@ -74,16 +79,15 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
 
             if (basePoseOverride == null)
             {
-                var obj = new GameObject("basePoseOverride");
-                if (obj != null)
-                {
-                    basePoseOverride = obj.transform;
-                    basePoseOverride.parent = shotgunShell.transform;
-                }
                 if (shotgunShell.PoseOverride != null)
                 {
+                    var obj = new GameObject("basePoseOverride");
+                    basePoseOverride = obj.transform;
+                    obj.transform.parent = shotgunShell.transform;
                     basePoseOverride.localPosition = shotgunShell.PoseOverride.localPosition;
+                    SettingsManager.LogVerboseInfo("BPOLP: " + basePoseOverride.localPosition);
                     basePoseOverride.localRotation = shotgunShell.PoseOverride.localRotation;
+                    SettingsManager.LogVerboseInfo("BPOLR: " + basePoseOverride.localRotation);
                 }
             }
 
@@ -96,8 +100,9 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
             
             if (competitivePoseOverride != null) //end my life
             {
-                competitivePoseOverride.localPosition = new Vector3(0, -0.025f, -0.1f);
-                competitivePoseOverride.localEulerAngles = new Vector3(0, 180, 90);
+                competitivePoseOverride.localPosition = SettingsManager.configCompetitiveShellPoseOverridePosition.Value;
+                SettingsManager.LogVerboseInfo("CPOLP: " + competitivePoseOverride.localPosition);
+                competitivePoseOverride.localEulerAngles = SettingsManager.configCompetitiveShellPoseOverrideRotation.Value;
                 if (shotgunShell.m_hand != null)
                 {
                     if (shotgunShell.m_hand.IsThisTheRightHand) //southpawoids
@@ -105,22 +110,30 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
                         competitivePoseOverride.localEulerAngles = new Vector3(0, 180, -90);
                     }
                 }
+                SettingsManager.LogVerboseInfo("CPOLR: " + competitivePoseOverride.localRotation);
             }
 
 
-            var hasRightAmount = (shotgunShell.ProxyRounds.Count + 1) <= SettingsManager.configMaxShellsInHand.Value;
+            var hasRightAmount = ((shotgunShell.ProxyRounds.Count + 1) <= SettingsManager.configMaxShellsInHand.Value);
 
             var noOneCaresAboutAmount = (shotgunShell.ProxyRounds.Count + 1 > SettingsManager.configMaxShellsInHand.Value && !SettingsManager.configRevertToNormalGrabbingWhenAboveX.Value);
 
-            var hasLeverAction = (shotgunShell.m_hand != null && shotgunShell.m_hand.OtherHand.CurrentInteractable != null && shotgunShell.m_hand.OtherHand.CurrentInteractable is LeverActionFirearm);
+            if (!hasRightAmount && !noOneCaresAboutAmount || (!hasAncestor && shotgunShell.ProxyRounds.Count == 0 && SettingsManager.configPezOnGrabOneShell.Value))
+            {
+                shouldPez = true;
+            }
+
+            SettingsManager.LogVerboseInfo(shouldPez);
+
+            var hasLeverAction = (shotgunShell.m_hand != null && shotgunShell.m_hand.OtherHand.CurrentInteractable != null && shotgunShell.m_hand.OtherHand.CurrentInteractable is LeverActionFirearm) || (shotgunShell.m_hand != null && shotgunShell.m_hand.OtherHand.CurrentInteractable != null && shotgunShell.m_hand.OtherHand.CurrentInteractable is Revolver);
 
             if (SettingsManager.configEnableCompetitiveShellGrabbing.Value && (hasRightAmount || noOneCaresAboutAmount) && shotgunShell.m_hand != null && shotgunShell.m_hand.OtherHand.CurrentInteractable != null && shotgunShell.m_hand.OtherHand.CurrentInteractable is FVRFireArm gun && gun.Magazine != null && gun.Magazine.IsIntegrated && (!hasLeverAction || (hasLeverAction && !SettingsManager.configNoLeverAction.Value)) && competitivePoseOverride != null)
             {
-                shotgunShell.PoseOverride = competitivePoseOverride;
+                SwitchTransform(shouldPez);
             }
             else
             {
-                shotgunShell.PoseOverride = basePoseOverride;
+                SwitchTransform(true);
             }
         }
     }

@@ -56,7 +56,8 @@ namespace CiarencesUnbelievableModifications.Patches
             [HarmonyPrefix]
             private static bool SkipBeginInteractIfAlreadyHeld(FVRPhysicalObject __instance, FVRViveHand hand)
             {
-                if (__instance is FVRFireArm && __instance.m_hand != null && !__instance.IsAltHeld && __instance.m_hand == hand.OtherHand && SettingsManager.configEnableFuckYouBitchDontGrabMyGun.Value) //you little fucker
+
+                if (__instance is FVRFireArm gun && !((gun is not Handgun && SettingsManager.configOnlyHandguns.Value) || (!SettingsManager.configOnlyHandguns.Value)) && __instance.m_hand != null && !__instance.IsAltHeld && __instance.m_hand == hand.OtherHand && SettingsManager.configEnableFuckYouBitchDontGrabMyGun.Value) //you little fucker
                 {
                     hand.CurrentInteractable = null;
                     return false;

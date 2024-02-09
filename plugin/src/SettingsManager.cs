@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using HarmonyLib;
+using UnityEngine;
 using CiarencesUnbelievableModifications.MonoBehaviours;
 using FistVR;
 using BepInEx.Logging;
@@ -50,6 +51,7 @@ namespace CiarencesUnbelievableModifications
         internal static ConfigEntry<bool> configReverseMagHoldHandgunOnly;
 
         internal static ConfigEntry<bool> configEnableFuckYouBitchDontGrabMyGun;
+        internal static ConfigEntry<bool> configOnlyHandguns;
 
         internal static ConfigEntry<bool> configEnableStockFoldOnSpawn;
 
@@ -60,6 +62,11 @@ namespace CiarencesUnbelievableModifications
         internal static ConfigEntry<bool> configRevertToNormalGrabbingWhenAboveX;
         internal static ConfigEntry<int> configMaxShellsInHand;
         internal static ConfigEntry<bool> configNoLeverAction;
+        internal static ConfigEntry<Vector3> configCompetitiveShellPoseOverridePosition;
+        internal static ConfigEntry<Vector3> configCompetitiveShellPoseOverrideRotation;
+        internal static ConfigEntry<bool> configPezOnGrabOneShell;
+        internal static ConfigEntry<bool> configGrabOneShellOnTrigger;
+        internal static ConfigEntry<bool> configReverseGrabAndTrigger;
 
         internal static ConfigFile configFile;
 
@@ -189,6 +196,11 @@ namespace CiarencesUnbelievableModifications
                 true,
                 "Prevents your other hand from instantly grabbing the gun you're currently holding");
 
+            configOnlyHandguns = config.Bind(bitchDontGrabMyGunCatName,
+                "OnlyHandguns",
+                false,
+                "Only enables the gun snatching prevention for handguns");
+
             #endregion
 
             #region FoldStockOnSpawn
@@ -226,6 +238,31 @@ namespace CiarencesUnbelievableModifications
                 "NoLeverAction",
                 true,
                 "Prevents competitively grabbing shells while holding a lever-action");
+
+            configCompetitiveShellPoseOverridePosition = config.Bind(competitiveShellGrabbing,
+                "CompetitiveShellPoseOverridePosition",
+                new Vector3(0, -0.025f, -0.1f),
+                "The position offset from the normal way shotgun shells are held, change if shells are jittery when colliding");
+
+            configCompetitiveShellPoseOverrideRotation = config.Bind(competitiveShellGrabbing,
+                "configCompetitiveShellPoseOverrideRotation",
+                new Vector3(0, 180, 90),
+                "The rotation offset from the normal way shotgun shells are held");
+
+            configPezOnGrabOneShell = config.Bind(competitiveShellGrabbing,
+                "configPezOnGrabOneShell",
+                true,
+                "If only one shell is grabbed (for example using Trigger), shell will be in pez form");
+
+            configGrabOneShellOnTrigger = config.Bind(competitiveShellGrabbing,
+                "configGrabOneShellOnTrigger",
+                true,
+                "If trigger is pressed on a Quickbelt slot, grab a single shell");
+
+            configReverseGrabAndTrigger = config.Bind(competitiveShellGrabbing,
+                "configReverseGrabAndTrigger",
+                false,
+                "Press trigger to grab a whole stack of shells, press grab to grab a single one");
 
             #endregion
         }

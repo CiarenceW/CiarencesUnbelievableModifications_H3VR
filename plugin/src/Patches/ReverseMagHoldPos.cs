@@ -11,9 +11,9 @@ namespace CiarencesUnbelievableModifications.Patches
         [HarmonyPostfix]
         private static void AddMagazinePostExtenderComponent(FVRFireArmMagazine __instance)
         {
-            if (!__instance.GetComponent<FVRMagazinePoseExtender>())
+            if (__instance.ObjectWrapper != null && __instance.ObjectWrapper.ItemID != null && !IsMelonAmmoBoxTeehee(__instance))
             {
-                __instance.gameObject.AddComponent<FVRMagazinePoseExtender>();
+                __instance.GetOrAddComponent<FVRMagazinePoseExtender>();
             }
 
             //nothing to do with this patch but uhhhhhhhhhh oh my fucking god I can't be fucked making another class
@@ -22,6 +22,11 @@ namespace CiarencesUnbelievableModifications.Patches
                 //unfinished
                 //__instance.gameObject.AddComponent<FVRTimedObjectDestructor>();
             }
+        }
+
+        public static bool IsMelonAmmoBoxTeehee(FVRFireArmMagazine magazine)
+        {
+            return magazine.ObjectWrapper.ItemID.Contains(".MELON");
         }
 
         [HarmonyPatch(typeof(FVRFireArmMagazine), nameof(FVRFireArmMagazine.UpdateInteraction))]
