@@ -34,7 +34,7 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
         {
             magazine = GetComponent<FVRFireArmMagazine>();
 
-            if (magazine.ObjectWrapper == null || magazine.IsIntegrated) Destroy(this); //I think it's for shotguns
+            if (CiarencesUnbelievableModifications.isBetterHandsPalmingEnabled) Destroy(this);
 
             distance_override = SettingsManager.BindMagazineOffset(magazine).Value; //assign (if it exists) persistent data
 
@@ -200,16 +200,9 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
 
         //this is for the KeepPalmedMagRot transpiler, while we were experimenting with stuff, but now it's easier for the config
         public Quaternion GetRotation()
-        {
-            if (SettingsManager.configEnableMagPalmKeepOffset.Value)
-            {
-                //Szikaka I love you
-                return Quaternion.LookRotation(magazine.m_magParent.transform.TransformDirection(relativeForward), magazine.m_magParent.transform.TransformDirection(relativeUp)); //Szikaka I love you
-            }
-            else
-            {
-                return magazine.m_magParent.transform.rotation;
-            }
-        }   
+		{
+			//Szikaka I love you
+			return Quaternion.LookRotation(magazine.m_magParent.transform.TransformDirection(relativeForward), magazine.m_magParent.transform.TransformDirection(relativeUp)); //Szikaka I love you
+		}   
     }
 }

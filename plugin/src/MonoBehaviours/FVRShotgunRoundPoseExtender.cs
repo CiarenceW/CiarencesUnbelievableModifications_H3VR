@@ -1,4 +1,5 @@
-﻿using FistVR;
+﻿using CiarencesUnbelievableModifications.Patches;
+using FistVR;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,14 +40,12 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
             {
                 if (basePoseOverride == null) return;
                 shotgunShell.PoseOverride = basePoseOverride;
-                shotgunShell.QBPoseOverride = baseQBPoseOverride;
             }
 
             //fuck
-            if (forceOff)
+            if (forceOff && !SettingsManager.configForceUnconditionalCompetitiveShellGrabbing.Value)
             {
                 shotgunShell.PoseOverride = basePoseOverride;
-                shotgunShell.QBPoseOverride = baseQBPoseOverride;
             }
         }
 
@@ -63,9 +62,13 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
             {
                 competitiveQBPoseOverride = new GameObject("competitiveQBPoseOverride").transform;
                 competitiveQBPoseOverride.parent = shotgunShell.QBPoseOverride.parent;
-                competitiveQBPoseOverride.localPosition = baseQBPoseOverride.localPosition + new Vector3(0, 0, GetComponent<CapsuleCollider>().radius * 1.75f);
-                competitiveQBPoseOverride.localEulerAngles = new Vector3(90, 0, 0);
+				competitiveQBPoseOverride.localPosition = baseQBPoseOverride.localPosition + new Vector3(0, (GetComponent<CapsuleCollider>().radius * 1.75f) * ((shotgunShell.ProxyRounds.Count + 1) / 2), 0);
+                competitiveQBPoseOverride.localEulerAngles = new Vector3(-90, 0, 0);
             }
+			else
+			{
+				competitiveQBPoseOverride.localPosition = baseQBPoseOverride.localPosition + new Vector3(0, (GetComponent<CapsuleCollider>().radius * 1.75f) * ((shotgunShell.ProxyRounds.Count + 1) / 2), 0);
+			}
 
             if (SettingsManager.configEnableCompetitiveShellGrabbing.Value)
             {
@@ -107,7 +110,9 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
                 {
                     if (shotgunShell.m_hand.IsThisTheRightHand) //southpawoids
                     {
-                        competitivePoseOverride.localEulerAngles = new Vector3(0, 180, -90);
+                        var southpaidsw = SettingsManager.configCompetitiveShellPoseOverrideRotation.Value;
+                        southpaidsw.z = southpaidsw.z * -1;
+                        competitivePoseOverride.localEulerAngles = southpaidsw;
                     }
                 }
                 SettingsManager.LogVerboseInfo("CPOLR: " + competitivePoseOverride.localRotation);
@@ -118,7 +123,7 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
 
             var noOneCaresAboutAmount = (shotgunShell.ProxyRounds.Count + 1 > SettingsManager.configMaxShellsInHand.Value && !SettingsManager.configRevertToNormalGrabbingWhenAboveX.Value);
 
-            if (!hasRightAmount && !noOneCaresAboutAmount || (!hasAncestor && shotgunShell.ProxyRounds.Count == 0 && SettingsManager.configPezOnGrabOneShell.Value))
+            if (!hasRightAmount && !noOneCaresAboutAmount || (!hasAncestor && shotgunShell.ProxyRounds.Count == 0 && SettingsManager.configPezOnGrabOneShell.Value && shotgunShell.m_hand != null && CompetitiveShellGrabbing.IsSingleShellGrabAction(shotgunShell.m_hand)))
             {
                 shouldPez = true;
             }

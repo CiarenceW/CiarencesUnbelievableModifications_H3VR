@@ -5,6 +5,8 @@ using FistVR;
 using HarmonyLib;
 using UnityEngine;
 using CiarencesUnbelievableModifications.MonoBehaviours;
+using System;
+using BepInEx.Configuration;
 
 namespace CiarencesUnbelievableModifications.Patches
 {
@@ -77,7 +79,7 @@ namespace CiarencesUnbelievableModifications.Patches
                     );
                 if (!codeMatcher.ReportFailure(__originalMethod, CiarencesUnbelievableModifications.Logger.LogError))
                 {
-                    SettingsManager.LogVerboseInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
+                    SettingsManager.LogVerboseLevelNameAndColor($"Patching {MethodBase.GetCurrentMethod().Name}", "MRT-Transpilers", System.ConsoleColor.Cyan);
 
                     codeMatcher
                         .Advance(1)
@@ -121,9 +123,9 @@ namespace CiarencesUnbelievableModifications.Patches
 
                 if (!codeMatcher.ReportFailure(__originalMethod, CiarencesUnbelievableModifications.Logger.LogError))
                 {
-                    SettingsManager.LogVerboseInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
+					SettingsManager.LogVerboseLevelNameAndColor($"Patching {MethodBase.GetCurrentMethod().Name}", "MRT-Transpilers", System.ConsoleColor.Cyan);
 
-                    codeMatcher.SetAndAdvance(OpCodes.Ldsfld, AccessTools.Field(typeof(MagRetentionTweaks), nameof(magRetentionMinimumDistanceThreshold)));
+					codeMatcher.SetAndAdvance(OpCodes.Ldsfld, AccessTools.Field(typeof(MagRetentionTweaks), nameof(magRetentionMinimumDistanceThreshold)));
                     //thanks Szikaka (we copy the label of the current branch...)
                     var branchOperand = codeMatcher.Operand;
 
@@ -185,24 +187,37 @@ namespace CiarencesUnbelievableModifications.Patches
                     new CodeMatch(OpCodes.Call, AccessTools.Method(typeof(FVRPhysicalObject), "set_PivotLockRot"))
                     );
 
-                    if (!codeMatcher.ReportFailure(__originalMethod, CiarencesUnbelievableModifications.Logger.LogError))
-                    {
-                        SettingsManager.LogVerboseInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
+					if (!codeMatcher.ReportFailure(__originalMethod, CiarencesUnbelievableModifications.Logger.LogError))
+					{
+						SettingsManager.LogVerboseLevelNameAndColor($"Patching {MethodBase.GetCurrentMethod().Name}", "MPKO-Transpilers", System.ConsoleColor.Cyan);
 
-                        //removes the right hand assignment for the PivotLockRot, replaces it FVRMagazinePoseExtender.GetRotation (less fucking transpiling to do)
-                        codeMatcher
-                            .RemoveInstructions(5)
-                            .InsertAndAdvance(
-                            new CodeInstruction(OpCodes.Ldarg_0),
-                            new CodeInstruction(OpCodes.Ldarg_0),
-                            new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Component), nameof(Component.GetComponent), null, new[] { typeof(FVRMagazinePoseExtender) })),
-                            new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(FVRMagazinePoseExtender), nameof(FVRMagazinePoseExtender.GetRotation)))
-                            )
-                            ;
-                    }
-                    return codeMatcher.InstructionEnumeration();
-                }
-            }
+						codeMatcher
+							.CreateLabelAt(codeMatcher.Pos, out var falseLabel)
+							.CreateBranchAtMatch(true,
+								out var endLabel,
+								new CodeMatch(OpCodes.Ldarg_0),
+								new CodeMatch(OpCodes.Ldarg_0),
+								new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(FVRFireArmMagazine), nameof(FVRFireArmMagazine.m_magParent))),
+								new CodeMatch(OpCodes.Callvirt, AccessTools.Method(typeof(Component), "get_transform")),
+								new CodeMatch(OpCodes.Callvirt, AccessTools.Method(typeof(Transform), "get_rotation")),
+								new CodeMatch(OpCodes.Call, AccessTools.Method(typeof(FVRPhysicalObject), "set_PivotLockRot")),
+								new CodeMatch(OpCodes.Br))
+							.InsertAndAdvance(
+								new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(SettingsManager), nameof(SettingsManager.configEnableMagPalmKeepOffset))),
+								new CodeInstruction(OpCodes.Callvirt, AccessTools.PropertyGetter(typeof(ConfigEntry<>).MakeGenericType(typeof(bool)), nameof(ConfigEntry<bool>.Value))),
+								new CodeInstruction(OpCodes.Brfalse_S, falseLabel),
+								new CodeInstruction(OpCodes.Ldarg_0),
+								new CodeInstruction(OpCodes.Ldarg_0),
+								new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(Component), nameof(Component.GetComponent), null, new[] { typeof(FVRMagazinePoseExtender) })),
+								new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(FVRMagazinePoseExtender), nameof(FVRMagazinePoseExtender.GetRotation))),
+								new CodeInstruction(OpCodes.Callvirt, AccessTools.PropertySetter(typeof(FVRPhysicalObject), nameof(FVRPhysicalObject.PivotLockRot))),
+								new CodeInstruction(OpCodes.Br_S, endLabel)
+								);
+					}
+
+					return codeMatcher.InstructionEnumeration();
+				}
+			}
         }
     }
 }

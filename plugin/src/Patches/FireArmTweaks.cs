@@ -1,5 +1,6 @@
 ﻿using FistVR;
 using HarmonyLib;
+using UnityEngine;
 
 namespace CiarencesUnbelievableModifications.Patches
 {
@@ -11,7 +12,7 @@ namespace CiarencesUnbelievableModifications.Patches
             [HarmonyPostfix]
             private static void PatchFVRFireArmStartStock(FVRFireArm __instance)
             {
-                if (!SettingsManager.configEnableStockFoldOnSpawn.Value) return;
+                if (!SettingsManager.configEnableStockFoldOnSpawn.Value || GM.IsAsyncLoading) return;
                 if (__instance.HasStockPos())
                 {
                     if (__instance.GetStockPos() != null) //basically uh, fuck me
@@ -40,7 +41,7 @@ namespace CiarencesUnbelievableModifications.Patches
             [HarmonyPrefix]
             private static void PatchFVRStockXAxisStart(FVRFoldingStockXAxis __instance)
             {
-                if (!SettingsManager.configEnableStockFoldOnSpawn.Value)
+                if (!SettingsManager.configEnableStockFoldOnSpawn.Value || GM.IsAsyncLoading)
                 {
                     var eulers = __instance.Stock.localEulerAngles;
                     eulers.y = __instance.isMinClosed ? __instance.MinRot : __instance.MaxRot;
@@ -55,15 +56,55 @@ namespace CiarencesUnbelievableModifications.Patches
             [HarmonyPatch(typeof(FVRPhysicalObject), nameof(FVRPhysicalObject.BeginInteraction))]
             [HarmonyPrefix]
             private static bool SkipBeginInteractIfAlreadyHeld(FVRPhysicalObject __instance, FVRViveHand hand)
-            {
+			{
 
-                if (__instance is FVRFireArm gun && !((gun is not Handgun && SettingsManager.configOnlyHandguns.Value) || (!SettingsManager.configOnlyHandguns.Value)) && __instance.m_hand != null && !__instance.IsAltHeld && __instance.m_hand == hand.OtherHand && SettingsManager.configEnableFuckYouBitchDontGrabMyGun.Value) //you little fucker
-                {
-                    hand.CurrentInteractable = null;
-                    return false;
-                }
-                return true;
-            }
-        }
-    }
+				if (__instance is FVRFireArm gun && ((gun is Handgun && SettingsManager.configOnlyHandguns.Value) || (!SettingsManager.configOnlyHandguns.Value)) && __instance.m_hand != null && !__instance.IsAltHeld && __instance.m_hand == hand.OtherHand && SettingsManager.configEnableFuckYouBitchDontGrabMyGun.Value) //you little fucker
+				{
+					hand.CurrentInteractable = null;
+					return false;
+				}
+				return true;
+			}
+		}
+
+		internal static class KnockAKDrumOut
+		{
+			[HarmonyPatch(typeof(FVRPhysicalObject), nameof(FVRPhysicalObject.OnCollisionEnter))]
+			[HarmonyPostfix]
+			private static void CheckIfCanKnockDrumOut(FVRPhysicalObject __instance, Collision col)
+			{
+				if (!SettingsManager.configEnableKnockAKDrumOut.Value) return;
+
+				if (__instance is not FVRFireArmMagazine magazine) return;
+
+				if (col.transform.TryGetComponent<FVRFireArm>(out var gun))
+				{
+					SettingsManager.LogVerboseInfo("Is gun");
+					if (__instance.m_hand != null)
+					{
+						SettingsManager.LogVerboseInfo("Hand isn't null");
+
+						if ((gun.TryGetComponentInChildren<PhysicalMagazineReleaseLatch>(out var _) || (SettingsManager.configForAllNonEjectableGuns.Value && ((gun is OpenBoltReceiver openBolt && !openBolt.HasMagReleaseButton) || (gun is ClosedBoltWeapon closedBolt && !closedBolt.HasMagReleaseButton) || (gun is Handgun handgun && !handgun.HasMagReleaseButton) || (gun is BoltActionRifle boltAction && !boltAction.HasMagEjectionButton)))) && __instance.GetComponent<Rigidbody>() != null && __instance.GetComponent<Rigidbody>().velocity.magnitude > 1f)
+						{
+							if (gun.Magazine != null && !gun.Magazine.IsIntegrated && !gun.Magazine.GetCanPalm())
+							{
+								SettingsManager.LogVerboseInfo("Has PhysicalMagazineReleaseLatch");
+
+								if (gun.m_hand != null && gun.m_hand.Input.TouchpadPressed && Vector2.Distance(gun.m_hand.Input.TouchpadAxes, Vector2.down) < 45f)
+								{
+									if (!gun.m_hand.IsInStreamlinedMode)
+									{
+										SettingsManager.LogVerboseInfo("Bump ejecting mag!");
+										gun.EjectMag(true);
+									}
+								}
+
+								SettingsManager.LogVerboseInfo(Vector2.Distance(gun.m_hand.Input.TouchpadAxes, Vector2.down) < 45f);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }

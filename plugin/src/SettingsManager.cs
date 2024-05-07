@@ -26,6 +26,10 @@ namespace CiarencesUnbelievableModifications
         const string bitchDontGrabMyGunCatName = "Bitch Dont Grab My Gun";
         const string foldStockOnSpawn = "Fold Stock On Spawn";
         const string competitiveShellGrabbing = "Competitive Shell Grabbing";
+        const string timedObjectDestructionCatName = "Timed Object Destruction";
+		const string knockAKDrumOutCatName = "Knock AK Drums out";
+		const string easyMagLoadingCategoryBlacklistCatName = "Easy Mag Loading Category Blacklist";
+		const string virtualStockCategoryBlacklistCatName = "Virtual Stock Category Blacklist";
 
         internal static bool Verbose
         {
@@ -59,16 +63,38 @@ namespace CiarencesUnbelievableModifications
 
         internal static ConfigEntry<bool> configEnableCompetitiveShellGrabbing;
         internal static ConfigEntry<bool> configOnlyGrabXFromQB;
+        internal static ConfigEntry<bool> configOnlyGrabPairAmountOfShells;
         internal static ConfigEntry<bool> configRevertToNormalGrabbingWhenAboveX;
         internal static ConfigEntry<int> configMaxShellsInHand;
         internal static ConfigEntry<bool> configNoLeverAction;
+		internal static ConfigEntry<bool> configForceUnconditionalCompetitiveShellGrabbing;
         internal static ConfigEntry<Vector3> configCompetitiveShellPoseOverridePosition;
         internal static ConfigEntry<Vector3> configCompetitiveShellPoseOverrideRotation;
+        internal static ConfigEntry<bool> configIncreaseRoundInsertTriggerZone;
+        internal static ConfigEntry<float> configTriggerZoneMultiplier;
         internal static ConfigEntry<bool> configPezOnGrabOneShell;
         internal static ConfigEntry<bool> configGrabOneShellOnTrigger;
         internal static ConfigEntry<bool> configReverseGrabAndTrigger;
+        internal static ConfigEntry<bool> configOnlyGrabOneWhenChamberOpen;
+		internal static ConfigEntry<bool> configGrabOneWhenSmartPalmingOff;
 
-        internal static ConfigFile configFile;
+		internal static ConfigEntry<bool> configEnableTimedObjectDestruction;
+        internal static ConfigEntry<bool> configOnlyCleanupEmpties;
+        internal static ConfigEntry<bool> configDestroyAllButOne;
+
+		internal static ConfigEntry<bool> configEnableKnockAKDrumOut;
+		internal static ConfigEntry<bool> configForAllNonEjectableGuns;
+
+		internal static SectionConfigList<FVRObject.OTagFirearmAction> sectionConfigListVirtualStockBlacklist;
+		internal static SectionConfigList<FVRObject.OTagFirearmSize> sectionConfigListEasyMagLoadingBlacklist;
+
+		internal static ConfigEntry<string> configVirtualStockWeaponBlacklist;
+		internal static ConfigEntry<string> configVirtualStockWeaponWhitelist;
+
+		internal static ConfigEntry<string> configEasyMagLoadingWeaponBlacklist;
+		internal static ConfigEntry<string> configEasyMagLoadingWeaponWhitelist;
+
+		internal static ConfigFile configFile;
 
         internal static void InitializeAndBindSettings(ConfigFile config)
         {
@@ -150,8 +176,8 @@ namespace CiarencesUnbelievableModifications
 
             configEnableReverseMagHold = config.Bind(reverseMagHoldPosCatName,
                 "EnableReverseMagHold",
-                true,
-                "Allows you to grab a magazine upside-down");
+                false,
+                "Allows you to grab a magazine upside-down (Disabled automatically when BetterHands' mag palming is on)");
 
             configReverseMagGrabMinDotProduct = config.Bind(reverseMagHoldPosCatName,
                 "ReverseMagHoldMinDotProduct",
@@ -193,12 +219,12 @@ namespace CiarencesUnbelievableModifications
 
             configEnableFuckYouBitchDontGrabMyGun = config.Bind(bitchDontGrabMyGunCatName,
                 "EnableBitchDontGrabMyGun",
-                true,
+                false,
                 "Prevents your other hand from instantly grabbing the gun you're currently holding");
 
             configOnlyHandguns = config.Bind(bitchDontGrabMyGunCatName,
                 "OnlyHandguns",
-                false,
+                true,
                 "Only enables the gun snatching prevention for handguns");
 
             #endregion
@@ -207,7 +233,7 @@ namespace CiarencesUnbelievableModifications
 
             configEnableStockFoldOnSpawn = config.Bind(foldStockOnSpawn,
                 "EnableStockFoldOnSpawn",
-                true,
+                (CiarencesUnbelievableModifications.safehouseProgressionPlugin == null) ? true : false, //if player is using safehouse mod, then make it false
                 "Makes the foldable stocks of guns be folded when spawned");
 
             #endregion
@@ -216,13 +242,13 @@ namespace CiarencesUnbelievableModifications
 
             configEnableCompetitiveShellGrabbing = config.Bind(competitiveShellGrabbing,
                 "EnableCompetitiveShellGrabbing",
-                true,
+                false,
                 "Enables grabbing shotgun shells competitive-shooting style");
 
             configOnlyGrabXFromQB = config.Bind(competitiveShellGrabbing,
                 "OnlyGrabXFromQB",
                 true,
-                "Only grab X amount (MaxShellsInPalm) of shells from a quickbelt slot");
+                "Only grab X amount (MaxShellsInPalm) of shells from a non-spawnlocked quickbelt slot");
 
             configRevertToNormalGrabbingWhenAboveX = config.Bind(competitiveShellGrabbing,
                 "RevertToNormalProxyPositionWhenAboveX",
@@ -234,10 +260,20 @@ namespace CiarencesUnbelievableModifications
                 4,
                 "The max amount of shells that can be palmed in a competitive-shooting style");
 
+            configOnlyGrabPairAmountOfShells = config.Bind(competitiveShellGrabbing,
+                "OnlyGrabPairAmountOfShells",
+                false,
+                "Forces the amount of grabbed shells in limited ammo mode to be pair");
+
             configNoLeverAction = config.Bind(competitiveShellGrabbing,
                 "NoLeverAction",
                 true,
                 "Prevents competitively grabbing shells while holding a lever-action");
+
+			configForceUnconditionalCompetitiveShellGrabbing = config.Bind(competitiveShellGrabbing,
+				"ForceUnconditionalCompetitiveShellGrabbing",
+				false,
+				"If true, will always grab shotgun shells in a competitive-shooting style");
 
             configCompetitiveShellPoseOverridePosition = config.Bind(competitiveShellGrabbing,
                 "CompetitiveShellPoseOverridePosition",
@@ -248,6 +284,16 @@ namespace CiarencesUnbelievableModifications
                 "configCompetitiveShellPoseOverrideRotation",
                 new Vector3(0, 180, 90),
                 "The rotation offset from the normal way shotgun shells are held");
+
+            configIncreaseRoundInsertTriggerZone = config.Bind(competitiveShellGrabbing,
+                "configIncreaseRoundInsertTriggerZone",
+                false,
+                "Increases the size of the trigger zone where rounds will be loaded, makes reloading easier");
+
+            configTriggerZoneMultiplier = config.Bind(competitiveShellGrabbing,
+                "configTriggerZoneMultiplier",
+                2f,
+                "The value by which the trigger zone's bounds will be mutliplied by");
 
             configPezOnGrabOneShell = config.Bind(competitiveShellGrabbing,
                 "configPezOnGrabOneShell",
@@ -264,8 +310,85 @@ namespace CiarencesUnbelievableModifications
                 false,
                 "Press trigger to grab a whole stack of shells, press grab to grab a single one");
 
-            #endregion
-        }
+            configOnlyGrabOneWhenChamberOpen = config.Bind(competitiveShellGrabbing,
+                "OnlyGrabOneWhenChamberOpen",
+                false,
+                "Only grabs one shell when the chamber is opened and accessible");
+
+			configGrabOneWhenSmartPalmingOff = config.Bind(competitiveShellGrabbing,
+				"GrabOneWhenSmartPalmingOff",
+				false,
+				"Only grab one shell when Smart Palming is off");
+
+			#endregion
+
+			#region KnockAKDrumOut
+
+			configEnableKnockAKDrumOut = config.Bind(knockAKDrumOutCatName,
+				"KnockAKDrumOut",
+				true,
+				"Enables you to knock a drum magazine from a gun with a physical magazine latch by knocking it with another mag, while pressing touchpad down on the controller with the gun");
+
+			configForAllNonEjectableGuns = config.Bind(knockAKDrumOutCatName,
+				"EnableForAllNonEjectableGuns",
+				false,
+				"Enables knocking out drum mags for guns that don't have an eject button");
+
+			#endregion
+
+			#region EasyMagLoadingBlacklist
+
+			sectionConfigListEasyMagLoadingBlacklist = new SectionConfigList<FVRObject.OTagFirearmSize>() { section = easyMagLoadingCategoryBlacklistCatName, configEntries = BindAllTypesOfFireArms<FVRObject.OTagFirearmSize>(config, easyMagLoadingCategoryBlacklistCatName) };
+
+			configEasyMagLoadingWeaponBlacklist = config.Bind(easyMagLoadingCategoryBlacklistCatName,
+				"EasyMagLoadingWeaponSpecificBlacklist",
+				string.Empty,
+				@"Specific weapons that should be banned from Easy Mag Loading. Needs to be the name that displays on the Wrist Menu. Format goes as follows: GunName|GunName ");
+
+			configEasyMagLoadingWeaponWhitelist = config.Bind(easyMagLoadingCategoryBlacklistCatName,
+				"EasyMagLoadingWeaponSpecificWhitelist",
+				string.Empty,
+				@"Specific weapons that should always have Easy Mag Loading on, takes priority over any blacklist. Needs to be the name that displays on the Wrist Menu. Format goes as follows: GunName|GunName ");
+
+			#endregion
+
+			#region VirtualStockBlacklist
+
+			sectionConfigListVirtualStockBlacklist = new SectionConfigList<FVRObject.OTagFirearmAction>() { section = virtualStockCategoryBlacklistCatName, configEntries = BindAllTypesOfFireArms<FVRObject.OTagFirearmAction>(config, virtualStockCategoryBlacklistCatName) };
+
+			configVirtualStockWeaponBlacklist = config.Bind(virtualStockCategoryBlacklistCatName,
+				"VirtualStockWeaponSpecificBlacklist",
+				string.Empty,
+				@"Specific weapons that should be banned from Virtual Stock. Needs to be the name that displays on the Wrist Menu. Format goes as follows: GunName|GunName ");
+
+			configVirtualStockWeaponWhitelist = config.Bind(virtualStockCategoryBlacklistCatName,
+				"VirtualStockWeaponSpecificWhitelist",
+				string.Empty,
+				@"Specific weapons that should always have Virtual Stock on, takes priority over any blacklist. Needs to be the name that displays on the Wrist Menu. Format goes as follows: GunName|GunName ");
+
+			#endregion
+		}
+
+		internal static Dictionary<T, ConfigEntry<bool>> BindAllTypesOfFireArms<T>(ConfigFile config, string section) where T: Enum
+		{
+			Dictionary<T, ConfigEntry<bool>> fireArmActionConfigEntries = new();
+			foreach (var enums in ExtensionsToMakeMyLifeLessShit.GetEnumList<T>())
+			{
+				fireArmActionConfigEntries.Add(enums, config.Bind(section,
+					enums.ToString(),
+					false,
+					$"Should guns from the {enums.ToString()} category be excluded from {section}?"));
+			}
+			return fireArmActionConfigEntries;
+		}
+
+		internal static void LogVerboseLevelNameAndColor(object data, string levelName, ConsoleColor color, bool forceLog = false)
+		{
+			if (Verbose || forceLog)
+			{
+				CiarencesUnbelievableModifications.Logger.LogWithCustomLevelNameAndColor(data, levelName, color);
+			}
+		}
 
         internal static void LogVerboseInfo(object data, bool forceLog = false)
         {

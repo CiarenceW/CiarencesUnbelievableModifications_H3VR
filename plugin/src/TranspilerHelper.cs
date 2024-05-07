@@ -26,13 +26,24 @@ namespace CiarencesUnbelievableModifications
             return (!codeMatcher.ReportFailure(__originalMethod, CiarencesUnbelievableModifications.Logger.LogError));
         }
 
-        public static void Print(this CodeMatcher codeMatcher)
+        public static void Print(this CodeMatcher codeMatcher, ConsoleColor color = ConsoleColor.DarkCyan)
         {
             var instructs = codeMatcher.Instructions().ToArray();
             for (int i = 0; i < instructs.Length; i++)
             {
-                CiarencesUnbelievableModifications.Logger.LogInfo(instructs[i].ToString());
+                CiarencesUnbelievableModifications.Logger.LogInfoWithColor(instructs[i].ToString(), color);
             }
-        }
-    }
+		}
+
+		public static CodeMatcher CreateBranchAtMatch(this CodeMatcher codeMatcher, bool useEnd, out Label label, params CodeMatch[] codeMatches)
+		{
+			var clone = codeMatcher.Clone();
+
+			clone
+			.Start()
+			.MatchForward(useEnd, codeMatches);
+
+			return codeMatcher.CreateLabelAt(clone.Pos, out label);
+		}
+	}
 }

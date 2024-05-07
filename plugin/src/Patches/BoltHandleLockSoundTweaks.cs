@@ -34,7 +34,7 @@ namespace CiarencesUnbelievableModifications.Patches
 
                 if (TranspilerHelper.TryMatchForward(true, instructions, generator, out var codeMatcher, __originalMethod, CiarencesUnbelievableModifications.Logger.LogError, matches))
                 {
-                    SettingsManager.LogVerboseInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
+                    SettingsManager.LogVerboseLevelNameAndColor($"Patching {MethodBase.GetCurrentMethod().Name}", "BHLS-Transpilers", System.ConsoleColor.Cyan);
 
                     codeMatcher
                         .SetInstructionAndAdvance(new CodeInstruction(OpCodes.Ldarg_0))
@@ -59,7 +59,7 @@ namespace CiarencesUnbelievableModifications.Patches
 
                 if (TranspilerHelper.TryMatchForward(false, instructions, generator, out var codeMatcher, __originalMethod, CiarencesUnbelievableModifications.Logger.LogError, matches))
                 {
-                    SettingsManager.LogVerboseInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
+                    SettingsManager.LogVerboseLevelNameAndColor($"Patching {MethodBase.GetCurrentMethod().Name}", "BHLS-Transpilers", System.ConsoleColor.Cyan);
 
                     codeMatcher
                         .InsertAndAdvance(new CodeInstruction(OpCodes.Ldarg_0))

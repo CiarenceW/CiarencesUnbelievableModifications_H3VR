@@ -101,7 +101,7 @@ namespace CiarencesUnbelievableModifications.Patches
 
                 if (!codeMatcher.ReportFailure(__originalMethod, CiarencesUnbelievableModifications.Logger.LogError))
                 {
-                    SettingsManager.LogVerboseInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
+                    SettingsManager.LogVerboseLevelNameAndColor($"Patching {MethodBase.GetCurrentMethod().Name}", "CBC-Transpilers", System.ConsoleColor.Cyan);
 
                     codeMatcher
                         .RemoveInstruction()

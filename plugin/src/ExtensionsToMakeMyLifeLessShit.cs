@@ -1,4 +1,9 @@
-﻿using UnityEngine;
+﻿using HarmonyLib;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection.Emit;
+using UnityEngine;
 
 namespace CiarencesUnbelievableModifications
 {
@@ -58,5 +63,52 @@ namespace CiarencesUnbelievableModifications
         {
             return (component.TryGetComponent<T>(out var result)) ? result : component.AddComponent<T>();
         }
+
+		public static List<CodeInstruction> ToCodeInstructions(this System.Reflection.MethodInfo methodInfo, Dictionary<CodeInstruction, CodeInstruction> replaceInstructionWith = null)
+		{
+			var methodIL = PatchProcessor.GetOriginalInstructions(methodInfo);
+
+			if (replaceInstructionWith != null)
+			{
+				for (int instructionIndex = 0; instructionIndex < methodIL.Count; instructionIndex++)
+				{
+					if (replaceInstructionWith.TryGetValue(methodIL[instructionIndex], out var replacementInstrution))
+					{
+						methodIL[instructionIndex] = replacementInstrution;
+					}
+				}
+			}
+
+			return methodIL;
+		}
+
+		public static List<CodeInstruction> ToCodeInstructionsClipLast(this System.Reflection.MethodInfo methodInfo, out List<Label> extractedLabels, Dictionary<CodeInstruction, CodeInstruction> replaceInstructionWith = null)
+		{
+			var methodIL = PatchProcessor.GetOriginalInstructions(methodInfo);
+
+			if (replaceInstructionWith != null)
+			{
+				for (int instructionIndex = 0; instructionIndex < methodIL.Count; instructionIndex++)
+				{
+					if (replaceInstructionWith.TryGetValue(methodIL[instructionIndex], out var replacementInstrution))
+					{
+						methodIL[instructionIndex] = replacementInstrution;
+					}
+				}
+			}
+
+			extractedLabels = (methodIL.Last().ExtractLabels());
+			methodIL.Remove(methodIL.Last());
+
+			return methodIL;
+		}
+
+		//from https://stackoverflow.com/a/801058
+		public static List<T> GetEnumList<T>()
+		{
+			List<T> list = new List<T>();
+			list.AddRange(((T[])Enum.GetValues(typeof(T))));
+			return list;
+		}
     }
 }

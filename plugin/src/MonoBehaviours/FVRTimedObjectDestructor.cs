@@ -10,33 +10,33 @@ namespace CiarencesUnbelievableModifications.MonoBehaviours
 
         private float timeBeforeDestroyed = 50f;
 
-        private FVRFireArmMagazine magazine;
+        private FVRPhysicalObject obj;
 
         private void Awake()
         {
             //unfinished
             return;
 
-            if (magazine.m_hand != null) return;
+            if (obj.m_hand != null) return;
 
             if (!GM.CurrentSceneSettings.IsSpawnLockingEnabled) return;
 
             destroyCoroutine = StartCoroutine(DestroyCountdown());
         }
 
-        private void OnPickup()
+        public void OnPickup()
         {
             StopCoroutine(destroyCoroutine);
         }
 
-        private void OnDrop()
+        public void OnDrop()
         {
             StopCoroutine(destroyCoroutine);
 
             destroyCoroutine = StartCoroutine(DestroyCountdown());
         }
 
-        private void OnDestroy()
+        public void OnDestroy()
         {
             StopCoroutine(destroyCoroutine);
         }

@@ -15,13 +15,6 @@ namespace CiarencesUnbelievableModifications.Patches
             {
                 __instance.GetOrAddComponent<FVRMagazinePoseExtender>();
             }
-
-            //nothing to do with this patch but uhhhhhhhhhh oh my fucking god I can't be fucked making another class
-            if (!__instance.GetComponent<FVRTimedObjectDestructor>() && GM.TNH_Manager != null && GM.CurrentSceneSettings.IsSpawnLockingEnabled)
-            {
-                //unfinished
-                //__instance.gameObject.AddComponent<FVRTimedObjectDestructor>();
-            }
         }
 
         public static bool IsMelonAmmoBoxTeehee(FVRFireArmMagazine magazine)

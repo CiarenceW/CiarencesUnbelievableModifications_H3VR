@@ -5,10 +5,11 @@ using System.Reflection.Emit;
 using System.Reflection;
 using UnityEngine;
 using CiarencesUnbelievableModifications.MonoBehaviours;
-using Steamworks;
+using BepInEx.Configuration;
 
 namespace CiarencesUnbelievableModifications.Patches
 {
+	//Bounty idea by LiquidRemidi
     //I'm about to fucking die
     public static class CompetitiveShellGrabbing
     {
@@ -39,11 +40,32 @@ namespace CiarencesUnbelievableModifications.Patches
             }
         }
 
+        public static bool IsSingleShellGrabAction(FVRViveHand hand)
+        {
+            if (!SettingsManager.configGrabOneShellOnTrigger.Value)
+            {
+                return false;
+            }
+
+            if (SettingsManager.configReverseGrabAndTrigger.Value)
+            {
+                if (hand.Input.IsGrabDown) return true;
+            }
+            else
+            {
+                if (hand.Input.TriggerDown) return true;
+            }
+
+            return false;
+        }
+
         public static bool ShouldBeInline(Transform transform) //boolean bouillon
         {
             var round = transform.GetComponent<FVRFireArmRound>();
 
-            var vanillaCheck = (round.ProxyRounds.Count == 1 && (!SettingsManager.configEnableCompetitiveShellGrabbing.Value || round.GetComponent<FVRShotgunRoundPoseExtender>().shouldPez));
+            if (!transform.TryGetComponent<FVRShotgunRoundPoseExtender>(out var extender)) return round.ProxyRounds.Count == 1;
+
+            var vanillaCheck = (round.ProxyRounds.Count == 1 && (!SettingsManager.configEnableCompetitiveShellGrabbing.Value || extender.shouldPez));
             SettingsManager.LogVerboseInfo("Vanilla check: " + vanillaCheck);
             var hasLeverAction = (round.m_hand.OtherHand.CurrentInteractable != null && round.m_hand.OtherHand.CurrentInteractable is LeverActionFirearm);
             SettingsManager.LogVerboseInfo("has LeverAction: " + hasLeverAction);
@@ -54,21 +76,25 @@ namespace CiarencesUnbelievableModifications.Patches
             var shouldBeInline = (hasRightAmount || noOneCaresAboutAmount) && SettingsManager.configEnableCompetitiveShellGrabbing.Value && (!hasLeverAction || (hasLeverAction && !SettingsManager.configNoLeverAction.Value));
             SettingsManager.LogVerboseInfo("shouldBeInline: " + shouldBeInline);
 
-            return vanillaCheck || (shouldBeInline && !round.GetComponent<FVRShotgunRoundPoseExtender>().shouldPez);
+			var result = vanillaCheck || (shouldBeInline && !extender.shouldPez) || SettingsManager.configForceUnconditionalCompetitiveShellGrabbing.Value;
+			SettingsManager.LogVerboseInfo("Result: " + result);
+			return result;
         }
 
         public static bool ShouldSpeedInsert(Transform transform)
         {
             var round = transform.GetComponent<FVRFireArmRound>();
 
-            var vanillaCheck = (round.ProxyRounds.Count < 1 && (!SettingsManager.configEnableCompetitiveShellGrabbing.Value || round.GetComponent<FVRShotgunRoundPoseExtender>().shouldPez));
+            if (!transform.TryGetComponent<FVRShotgunRoundPoseExtender>(out var extender)) return round.ProxyRounds.Count < 1;
+
+            var vanillaCheck = (round.ProxyRounds.Count < 1 && (!SettingsManager.configEnableCompetitiveShellGrabbing.Value || extender.shouldPez));
             //SettingsManager.LogVerboseInfo("Vanilla check: " + vanillaCheck);
             var hasLeverAction = (round.m_hand.OtherHand.CurrentInteractable != null && round.m_hand.OtherHand.CurrentInteractable is LeverActionFirearm); ;
             //SettingsManager.LogVerboseInfo("has LeverAction: " + hasLeverAction);
             var hasRightAmount = (round.ProxyRounds.Count % 2 == 0 && (round.ProxyRounds.Count + 1) <= SettingsManager.configMaxShellsInHand.Value && SettingsManager.configEnableCompetitiveShellGrabbing.Value && (!hasLeverAction || (hasLeverAction && !SettingsManager.configNoLeverAction.Value)));
             //SettingsManager.LogVerboseInfo("HasRightAmount: " + hasRightAmount);
 
-            return vanillaCheck || (hasRightAmount && !round.GetComponent<FVRShotgunRoundPoseExtender>().shouldPez);
+            return vanillaCheck || (hasRightAmount && (!extender.shouldPez || SettingsManager.configForceUnconditionalCompetitiveShellGrabbing.Value));
         }
 
         //anton decided to not reuse the "GetNumRoundsPulled" method for some reason
@@ -95,14 +121,41 @@ namespace CiarencesUnbelievableModifications.Patches
                             }
                         }
                     }
-                }
+				}
 
-                if ((!hand.Input.IsGrabbing && hand.Input.TriggerDown && SettingsManager.configGrabOneShellOnTrigger.Value) || (hand.Input.IsGrabbing && !hand.Input.TriggerDown && SettingsManager.configReverseGrabAndTrigger.Value))
-                {
-                    roundNum = 1;
-                }
-            }
-        }
+				if (SettingsManager.configOnlyGrabPairAmountOfShells.Value && roundNum % 2 != 0)
+				{
+					if (roundNum - 1 == 0)
+					{
+						roundNum = 2;
+					}
+					else
+					{
+						roundNum++;
+					}
+				}
+
+				if (hand.OtherHand.CurrentInteractable is TubeFedShotgun fireArm)
+				{
+					if (fireArm.RoundType == __instance.RoundType)
+					{
+						if (fireArm.GetChambers().Count == 1 && SettingsManager.configOnlyGrabOneWhenChamberOpen.Value)
+						{
+							var fvrfireArmChamber = fireArm.GetChambers()[0];
+							if (fvrfireArmChamber.IsManuallyChamberable && !fvrfireArmChamber.IsFull && fvrfireArmChamber.IsAccessible)
+							{
+								roundNum = 1;
+							}
+						}
+					}
+				}
+			}
+
+			if (IsSingleShellGrabAction(hand))
+			{
+				roundNum = 1;
+			}
+		}
 
         //"Reference to type 'FVRFireArmRound' claims it is defined in 'Assembly-CSharp', but it could not be found"
         public static void ForceNumRoundsPulledTrans(Transform bitch, ref int roundNum, FVRViveHand hand)
@@ -152,6 +205,82 @@ namespace CiarencesUnbelievableModifications.Patches
 
         internal static class Patches
         {
+			[HarmonyPatch(typeof(FVRFireArmRound), nameof(FVRFireArmRound.BeginInteraction))]
+			[HarmonyPrefix]
+			private static bool GrabSingularIfSmartPalmingOff(ref FVRFireArmRound __instance, FVRViveHand hand)
+			{
+				if (!__instance.m_isSpawnLock && __instance.QuickbeltSlot != null && GM.Options.ControlOptions.SmartAmmoPalming == ControlOptions.SmartAmmoPalmingMode.Disabled && __instance.ObjectWrapper != null && (SettingsManager.configGrabOneWhenSmartPalmingOff.Value || IsSingleShellGrabAction(hand)) && __instance.ProxyRounds.Count > 0)
+				{
+					FVRQuickBeltSlot quickbeltSlot = __instance.QuickbeltSlot;
+					var roundToGrabGO = Object.Instantiate<GameObject>(__instance.ObjectWrapper.GetGameObject(), __instance.transform.position, __instance.transform.rotation);
+
+					var roundToGrabRound = roundToGrabGO.GetComponent<FVRFireArmRound>();
+					if (__instance.m_canAnimate)
+					{
+						roundToGrabRound.BeginAnimationFrom(__instance.transform.position, __instance.transform.rotation);
+					}
+
+					var roundToQBGO = Object.Instantiate<GameObject>(__instance.ProxyRounds[0].ObjectWrapper.GetGameObject(), __instance.transform.position, __instance.transform.rotation);
+
+					var roundToQBRound = roundToQBGO.GetComponent<FVRFireArmRound>();
+					for (int proxyIndex = 1; proxyIndex < __instance.ProxyRounds.Count; proxyIndex++)
+					{
+						roundToQBRound.AddProxy(__instance.ProxyRounds[proxyIndex].Class, __instance.ProxyRounds[proxyIndex].ObjectWrapper);
+					}
+					__instance.ClearQuickbeltState();
+					roundToQBRound.SetQuickBeltSlot(quickbeltSlot);
+					__instance.DestroyAllProxies();
+					roundToGrabRound.BeginInteraction(hand);
+					hand.ForceSetInteractable(roundToGrabRound);
+					roundToQBRound.UpdateProxyDisplay();
+					UnityEngine.Object.Destroy(__instance.gameObject);
+
+					return false;
+				}
+				else
+				{
+					return true;
+				}
+			}
+
+			[HarmonyPatch(typeof(FVRFireArmRound), nameof(FVRFireArmRound.UpdateProxyPositions))]
+			[HarmonyPostfix]
+			private static void ResetProxyPoseMode(FVRFireArmRound __instance)
+			{
+				//otherwise 1/2 times it'll be picked up in standard mode, counter-intuitive I know.
+				__instance.ProxyPose = FVRFireArmRound.ProxyPositionMode.Standard;
+			}
+
+            [HarmonyPatch(typeof(TubeFedShotgun), nameof(TubeFedShotgun.Awake))]
+            [HarmonyPostfix]
+            private static void IncreaseShotgunRoundInsertTriggerZone(TubeFedShotgun __instance)
+            {
+                if (SettingsManager.configIncreaseRoundInsertTriggerZone.Value)
+                {
+                    var triggers = __instance.GetComponentsInChildren<FVRFireArmMagazineReloadTrigger>(); //multiple components for the KSG or whatever, hope it uses it, lol
+
+                    if (triggers != null && triggers.Length > 0)
+                    {
+                        for (int triggerIndex = 0; triggerIndex < triggers.Length; triggerIndex++)
+                        {
+                            var collider = triggers[triggerIndex].GetComponent<Collider>();
+
+                            if (collider is SphereCollider sphere) sphere.radius *= SettingsManager.configTriggerZoneMultiplier.Value;
+                            else if (collider is BoxCollider box)
+                            {
+                                var boxSize = box.size;
+                                boxSize.z *= SettingsManager.configTriggerZoneMultiplier.Value;
+
+                                box.size = boxSize;
+                            }
+                            else if (collider is CapsuleCollider capsule) capsule.height *= SettingsManager.configTriggerZoneMultiplier.Value;
+
+                            Debug.Log("increased trigger size");
+                        }
+                    }
+                }
+            }
+
             [HarmonyPatch(typeof(FVRFireArmRound), nameof(FVRFireArmRound.Awake))]
             [HarmonyPostfix]
             private static void AddPoseExtender(FVRFireArmRound __instance)
@@ -196,23 +325,51 @@ namespace CiarencesUnbelievableModifications.Patches
 
             [HarmonyPatch(typeof(FVRFireArmRound), nameof(FVRFireArmRound.DuplicateFromSpawnLock))]
             [HarmonyPostfix]
-            private static void DestroyDuplicatesIfSingleGrab(FVRFireArmRound __instance, ref GameObject __result, FVRViveHand hand)
-            {
-                if ((!hand.Input.IsGrabbing && hand.Input.TriggerDown && SettingsManager.configGrabOneShellOnTrigger.Value) || (hand.Input.IsGrabbing && !hand.Input.TriggerDown && SettingsManager.configReverseGrabAndTrigger.Value))
-                {
-                    var round = __result.GetComponent<FVRFireArmRound>();
+			private static void DestroyDuplicatesIfSingleGrab(FVRFireArmRound __instance, ref GameObject __result, FVRViveHand hand)
+			{
+				if (GM.Options.ControlOptions.SmartAmmoPalming == ControlOptions.SmartAmmoPalmingMode.Disabled)
+				{
+					if (__instance.TryGetComponent<FVRShotgunRoundPoseExtender>(out var _))
+					{
+						bool deleteProxies = false;
 
-                    for (int i = round.ProxyRounds.Count - 1; i >= 0; i--)
-                    {
-                        global::UnityEngine.Object.Destroy(round.ProxyRounds[i].GO);
-                        round.ProxyRounds[i].GO = null;
-                        round.ProxyRounds[i].Filter = null;
-                        round.ProxyRounds[i].Renderer = null;
-                        round.ProxyRounds[i].ObjectWrapper = null;
-                    }
-                    round.ProxyRounds.Clear();
-                }
-            }
+						if (IsSingleShellGrabAction(hand))
+						{
+							deleteProxies = true;
+						}
+
+						/*if (hand.OtherHand.CurrentInteractable is FVRFireArm fireArm)
+						{
+							if (fireArm.RoundType == __instance.RoundType)
+							{
+								if (fireArm.GetChambers().Count == 1 && SettingsManager.configOnlyGrabOneWhenChamberOpen.Value)
+								{
+									var fvrfireArmChamber = fireArm.GetChambers()[0];
+									if (fvrfireArmChamber.IsManuallyChamberable && !fvrfireArmChamber.IsFull && fvrfireArmChamber.IsAccessible)
+									{
+										deleteProxies = true;
+									}
+								}
+							}
+						}*/
+
+						if (deleteProxies)
+						{
+							var round = __result.GetComponent<FVRFireArmRound>();
+
+							for (int i = round.ProxyRounds.Count - 1; i >= 0; i--)
+							{
+								global::UnityEngine.Object.Destroy(round.ProxyRounds[i].GO);
+								round.ProxyRounds[i].GO = null;
+								round.ProxyRounds[i].Filter = null;
+								round.ProxyRounds[i].Renderer = null;
+								round.ProxyRounds[i].ObjectWrapper = null;
+							}
+							round.ProxyRounds.Clear();
+						}
+					}
+				}
+			}
         }
 
         internal static class Transpilers
@@ -225,17 +382,17 @@ namespace CiarencesUnbelievableModifications.Patches
 
                 if (codeMatcher.TryMatchForward(true, __originalMethod,
                     new CodeMatch(new CodeInstruction(OpCodes.Ldloc_S)),
-                    new CodeMatch(new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(FVRFireArmClip), nameof(FVRFireArmClip.m_capacity)))),
-                    new CodeMatch(new CodeInstruction(OpCodes.Ldloc_S)),
-                    new CodeMatch(new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(FVRFireArmClip), nameof(FVRFireArmClip.m_numRounds)))),
-                    new CodeMatch(new CodeInstruction(OpCodes.Sub)),
-                    new CodeMatch(new CodeInstruction(OpCodes.Stloc_2))
+                    new CodeMatch(new CodeInstruction(OpCodes.Ldloc_3)),
+					new CodeMatch(new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(FVRFireArm), nameof(FVRFireArm.GetChambers)))),
+					new CodeMatch(new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(List<>).MakeGenericType(typeof(FVRFireArmChamber)), "get_Count"))),
+					new CodeMatch(new CodeInstruction(OpCodes.Blt))
                     ))
                 {
-                    SettingsManager.LogVerboseInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
+                    SettingsManager.LogVerboseLevelNameAndColor($"Patching {MethodBase.GetCurrentMethod().Name}", "CSG-Transpilers", System.ConsoleColor.Cyan);
 
                     //CompetitiveShellGrabbing.ForceNumRoundsPulled(base.transform, ref num, hand);
                     codeMatcher
+						.Advance(1)
                         .InsertAndAdvance(
                         new CodeInstruction(OpCodes.Ldarg_0),
                         new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Component), "get_transform")),
@@ -266,7 +423,7 @@ namespace CiarencesUnbelievableModifications.Patches
                     new CodeMatch(OpCodes.Brfalse)
                     ))
                 {
-                    SettingsManager.LogVerboseInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
+                    SettingsManager.LogVerboseLevelNameAndColor($"Patching {MethodBase.GetCurrentMethod().Name}", "CSG-Transpilers", System.ConsoleColor.Cyan);
 
                     codeMatcher
                         .Advance(1)
@@ -290,7 +447,7 @@ namespace CiarencesUnbelievableModifications.Patches
 
                 if (codeMatcher.TryMatchForward(true, __originalMethod,
                     new CodeMatch(OpCodes.Ldarg_0),
-                    new CodeMatch(OpCodes.Call, AccessTools.PropertyGetter(typeof(FVRViveHand), nameof(FVRViveHand.ClosestPossibleInteractable))),
+                    new CodeMatch(null, AccessTools.PropertyGetter(typeof(FVRViveHand), nameof(FVRViveHand.ClosestPossibleInteractable))), //this pisses me off, but H3VRUtils for some reasons replaces the Call OpCodes by Callvirt, maybe a side effect of using fucking MonoMod
                     new CodeMatch(OpCodes.Ldarg_0),
                     new CodeMatch(OpCodes.Callvirt, AccessTools.Method(typeof(FVRInteractiveObject), nameof(FVRInteractiveObject.SimpleInteraction))),
                     new CodeMatch(OpCodes.Ldc_I4_1),
@@ -298,12 +455,24 @@ namespace CiarencesUnbelievableModifications.Patches
                     new CodeMatch(OpCodes.Ldc_I4_0)
                     ))
                 {
-                    SettingsManager.LogVerboseInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
-
+                    SettingsManager.LogVerboseLevelNameAndColor($"Patching {MethodBase.GetCurrentMethod().Name}", "CSG-Transpilers", System.ConsoleColor.Cyan);
+					
                     codeMatcher
-                        .SetAndAdvance(OpCodes.Ldarg_0, null)
+                        .SetAndAdvance(OpCodes.Ldloc_S, 13)
                         .CreateLabelAt(codeMatcher.Pos, out var label)
                         .InsertAndAdvance(
+                        new CodeInstruction(OpCodes.Brtrue, label),
+
+                        new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(SettingsManager), nameof(SettingsManager.configGrabOneShellOnTrigger))),
+                        new CodeInstruction(OpCodes.Call, AccessTools.PropertyGetter(typeof(ConfigEntry<>).MakeGenericType(typeof(bool)), nameof(ConfigEntry<bool>.Value))),
+                        new CodeInstruction(OpCodes.Brfalse, label),
+
+                        new CodeInstruction(OpCodes.Ldarg_0),
+                        new CodeInstruction(OpCodes.Ldflda, AccessTools.Field(typeof(FVRViveHand), nameof(FVRViveHand.Input))),
+                        new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(HandInput), nameof(HandInput.TriggerDown))),
+                        new CodeInstruction(OpCodes.Brfalse, label),
+
+                        new CodeInstruction(OpCodes.Ldarg_0),
                         new CodeInstruction(OpCodes.Call, AccessTools.PropertyGetter(typeof(FVRViveHand), nameof(FVRViveHand.ClosestPossibleInteractable))),
                         new CodeInstruction(OpCodes.Ldnull),
                         new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Object), "op_Inequality")),
@@ -348,8 +517,6 @@ namespace CiarencesUnbelievableModifications.Patches
                         ;
                 }
 
-                codeMatcher.Print();
-
                 return codeMatcher.InstructionEnumeration();
             }
 
@@ -367,7 +534,7 @@ namespace CiarencesUnbelievableModifications.Patches
                     new CodeMatch(new CodeInstruction(OpCodes.Bge))
                     ))
                 {
-                    SettingsManager.LogVerboseInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
+                    SettingsManager.LogVerboseLevelNameAndColor($"Patching {MethodBase.GetCurrentMethod().Name}", "CSG-Transpilers", System.ConsoleColor.Cyan);
 
                     codeMatcher
                         .RemoveInstructions(4)
@@ -397,7 +564,7 @@ namespace CiarencesUnbelievableModifications.Patches
                     new CodeMatch(new CodeInstruction(OpCodes.Bne_Un))
                     ))
                 {
-                    SettingsManager.LogVerboseInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
+                    SettingsManager.LogVerboseLevelNameAndColor($"Patching {MethodBase.GetCurrentMethod().Name}", "CSG-Transpilers", System.ConsoleColor.Cyan);
 
                     codeMatcher
                         .RemoveInstructions(4) //yeet round count check
@@ -409,49 +576,72 @@ namespace CiarencesUnbelievableModifications.Patches
                         .SetOpcodeAndAdvance(OpCodes.Brfalse)
                         ;
 
-                    if (codeMatcher.TryMatchForward(true, __originalMethod,
-                        new CodeMatch(new CodeInstruction(OpCodes.Ldloc_0)),
-                        new CodeMatch(new CodeInstruction(OpCodes.Ldloc_2)),
-                        new CodeMatch(new CodeInstruction(OpCodes.Ldloc_3))
-                        ))
-                    {
-                        codeMatcher
-                            //.InsertAndAdvance(new CodeInstruction(OpCodes.Ldloc_S, vector1.LocalIndex))
-                            .InsertAndAdvance(
-                            new CodeInstruction(OpCodes.Ldarg_0),
-                            new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(Component), "get_transform")))
-                            .Advance(1)
-                            .RemoveInstructions(5)
-                            .Insert(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CompetitiveShellGrabbing), nameof(CompetitiveShellGrabbing.CalculateShellPositions))))
-                            ;
+					if (codeMatcher.TryMatchForward(true, __originalMethod,
+						new CodeMatch(OpCodes.Ldarg_0),
+						new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(FVRFireArmRound), nameof(FVRFireArmRound.RoundType))),
+						new CodeMatch(OpCodes.Call, AccessTools.Method(typeof(AM), nameof(AM.GetRoundPower))),
+						new CodeMatch(OpCodes.Ldc_I4_3),
+						new CodeMatch(OpCodes.Bne_Un)
+						))
+					{
+						codeMatcher
+							.Advance(1)
+							.CreateBranchAtMatch(false, out var label,
+							new CodeMatch(OpCodes.Ldarg_0),
+							new CodeMatch(OpCodes.Ldc_I4_1),
+							new CodeMatch(OpCodes.Stfld, AccessTools.Field(typeof(FVRFireArmRound), nameof(FVRFireArmRound.ProxyPose)))
+							)
+							.InsertAndAdvance(
+							new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(SettingsManager), nameof(SettingsManager.configForceUnconditionalCompetitiveShellGrabbing))),
+							new CodeInstruction(OpCodes.Call, AccessTools.PropertyGetter(typeof(ConfigEntry<>).MakeGenericType(typeof(bool)), nameof(ConfigEntry<bool>.Value))),
+							new CodeInstruction(OpCodes.Brtrue, label)
+							)
+							;
 
-                        if (codeMatcher.TryMatchForward(true, __originalMethod,
-                            new CodeMatch(OpCodes.Call, AccessTools.Method(typeof(Vector3), "op_Multiply", new[] { typeof(Vector3), typeof(float) })),
-                            new CodeMatch(OpCodes.Stloc_S),
-                            new CodeMatch(OpCodes.Ldc_I4_0),
-                            new CodeMatch(OpCodes.Stloc_S),
-                            new CodeMatch(OpCodes.Br),
-                            new CodeMatch(OpCodes.Ldarg_0),
-                            new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(FVRFireArmRound), nameof(FVRFireArmRound.ProxyRounds))),
-                            new CodeMatch(OpCodes.Ldloc_S),
-                            new CodeMatch(OpCodes.Callvirt, AccessTools.Method(typeof(List<>).MakeGenericType(typeof(FVRFireArmRound.ProxyRound)), "get_Item")),
-                            new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(FVRFireArmRound.ProxyRound), nameof(FVRFireArmRound.ProxyRound.GO))),
-                            new CodeMatch(OpCodes.Callvirt, AccessTools.Method(typeof(GameObject), "get_transform")),
-                            new CodeMatch(OpCodes.Ldloc_S),
-                            new CodeMatch(OpCodes.Ldloc_S),
-                            new CodeMatch(OpCodes.Ldloc_S)
-                            ))
-                        {
-                            codeMatcher
-                            .InsertAndAdvance(
-                            new CodeInstruction(OpCodes.Ldarg_0),
-                            new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(Component), "get_transform")))
-                            .Advance(1)
-                            .RemoveInstructions(5)
-                            .Insert(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CompetitiveShellGrabbing), nameof(CompetitiveShellGrabbing.CalculateQBShellPositions))))
-                            ;
-                        }
-                    }
+						if (codeMatcher.TryMatchForward(true, __originalMethod,
+							new CodeMatch(new CodeInstruction(OpCodes.Ldloc_0)),
+							new CodeMatch(new CodeInstruction(OpCodes.Ldloc_2)),
+							new CodeMatch(new CodeInstruction(OpCodes.Ldloc_3))
+							))
+						{
+							codeMatcher
+								//.InsertAndAdvance(new CodeInstruction(OpCodes.Ldloc_S, vector1.LocalIndex))
+								.InsertAndAdvance(
+								new CodeInstruction(OpCodes.Ldarg_0),
+								new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(Component), "get_transform")))
+								.Advance(1)
+								.RemoveInstructions(5)
+								.Insert(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CompetitiveShellGrabbing), nameof(CompetitiveShellGrabbing.CalculateShellPositions))))
+								;
+
+							if (codeMatcher.TryMatchForward(true, __originalMethod,
+								new CodeMatch(OpCodes.Call, AccessTools.Method(typeof(Vector3), "op_Multiply", new[] { typeof(Vector3), typeof(float) })),
+								new CodeMatch(OpCodes.Stloc_S),
+								new CodeMatch(OpCodes.Ldc_I4_0),
+								new CodeMatch(OpCodes.Stloc_S),
+								new CodeMatch(OpCodes.Br),
+								new CodeMatch(OpCodes.Ldarg_0),
+								new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(FVRFireArmRound), nameof(FVRFireArmRound.ProxyRounds))),
+								new CodeMatch(OpCodes.Ldloc_S),
+								new CodeMatch(OpCodes.Callvirt, AccessTools.Method(typeof(List<>).MakeGenericType(typeof(FVRFireArmRound.ProxyRound)), "get_Item")),
+								new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(FVRFireArmRound.ProxyRound), nameof(FVRFireArmRound.ProxyRound.GO))),
+								new CodeMatch(OpCodes.Callvirt, AccessTools.Method(typeof(GameObject), "get_transform")),
+								new CodeMatch(OpCodes.Ldloc_S),
+								new CodeMatch(OpCodes.Ldloc_S),
+								new CodeMatch(OpCodes.Ldloc_S)
+								))
+							{
+								codeMatcher
+								.InsertAndAdvance(
+								new CodeInstruction(OpCodes.Ldarg_0),
+								new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(Component), "get_transform")))
+								.Advance(1)
+								.RemoveInstructions(5)
+								.Insert(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CompetitiveShellGrabbing), nameof(CompetitiveShellGrabbing.CalculateQBShellPositions))))
+								;
+							}
+						}
+					}
                 }
 
                 return codeMatcher.InstructionEnumeration();
@@ -472,7 +662,7 @@ namespace CiarencesUnbelievableModifications.Patches
                     new CodeMatch(new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(List<>).MakeGenericType(typeof(FVRFireArmRound.ProxyRound)), "Clear")))
                     ))
                 {
-                    SettingsManager.LogVerboseInfo($"Patching {MethodBase.GetCurrentMethod().Name}");
+                    SettingsManager.LogVerboseLevelNameAndColor($"Patching {MethodBase.GetCurrentMethod().Name}", "CSG-Transpilers", System.ConsoleColor.Cyan);
 
                     codeMatcher
                         .InsertAndAdvance(
