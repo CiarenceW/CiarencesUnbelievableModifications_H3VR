@@ -18,7 +18,7 @@ namespace CiarencesUnbelievableModifications.Patches
             if (panel != null)
             {
                 panel.SetActive(true);
-				panel.transform.position = new Vector3(11.66f, -0.79f, 4.4f);
+				panel.transform.position = new Vector3(11.66f, -3.63f, 4.4f);
 				panel.transform.eulerAngles = new Vector3(0, 59.8033f, 0);
 			}
         }

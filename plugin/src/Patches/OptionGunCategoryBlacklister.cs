@@ -151,8 +151,6 @@ namespace CiarencesUnbelievableModifications.Patches
 						;
 				}
 
-				codeMatcher.Print(ConsoleColor.Green);
-
 				return codeMatcher.InstructionEnumeration();
 			}
 		}

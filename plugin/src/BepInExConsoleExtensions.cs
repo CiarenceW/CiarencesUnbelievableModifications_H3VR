@@ -99,7 +99,7 @@ namespace CiarencesUnbelievableModifications
 	{
 		internal static Type konType = null;
 
-		[Obsolete("Not obselete but will cause errors in the Sodalite console. So use is only valid for the BepInEx console :D")]
+		[Obsolete("Not obselete but will cause errors in the Sodalite console. So use is only valid for startup :D")]
 		public static ConsoleColor BackgroundColor
 		{
 			get { return (ConsoleColor)konType?.GetProperty("BackgroundColor").GetGetMethod(true).Invoke(null, null); }

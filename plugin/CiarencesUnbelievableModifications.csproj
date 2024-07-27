@@ -3,7 +3,7 @@
     <!-- TODO: Change these values! -->
     <PropertyGroup>
         <AssemblyName>CiarenceW.CiarencesUnbelievableModifications_H3VR</AssemblyName>
-        <Version>1.3.0</Version>
+        <Version>1.3.1</Version>
         <Authors>CiarenceW</Authors>
         <AssemblyTitle>CiarencesUnbelievableModifications</AssemblyTitle>
         <Description>Small tweaks and QoL things for H3VR</Description>

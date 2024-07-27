@@ -21,7 +21,9 @@ namespace CiarencesUnbelievableModifications
 
         public static bool TryMatchForward(this CodeMatcher codeMatcher, bool useEnd, MethodBase __originalMethod, params CodeMatch[] codeMatches)
         {
-            codeMatcher.MatchForward(useEnd, codeMatches);
+			codeMatcher
+				.Start()
+				.MatchForward(useEnd, codeMatches);
 
             return (!codeMatcher.ReportFailure(__originalMethod, CiarencesUnbelievableModifications.Logger.LogError));
         }
@@ -31,7 +33,7 @@ namespace CiarencesUnbelievableModifications
             var instructs = codeMatcher.Instructions().ToArray();
             for (int i = 0; i < instructs.Length; i++)
             {
-                CiarencesUnbelievableModifications.Logger.LogInfoWithColor(instructs[i].ToString(), color);
+                CiarencesUnbelievableModifications.Logger.LogMessageWithColor(instructs[i].ToString(), color);
             }
 		}
 

@@ -30,6 +30,7 @@ namespace CiarencesUnbelievableModifications
 		const string knockAKDrumOutCatName = "Knock AK Drums out";
 		const string easyMagLoadingCategoryBlacklistCatName = "Easy Mag Loading Category Blacklist";
 		const string virtualStockCategoryBlacklistCatName = "Virtual Stock Category Blacklist";
+		const string experimentalCatName = "Experimental stuff, might not work ^^ (probably requires restart)";
 
         internal static bool Verbose
         {
@@ -93,6 +94,9 @@ namespace CiarencesUnbelievableModifications
 
 		internal static ConfigEntry<string> configEasyMagLoadingWeaponBlacklist;
 		internal static ConfigEntry<string> configEasyMagLoadingWeaponWhitelist;
+
+		internal static ConfigEntry<bool> configEnableSodaliteConsoleColorPatch;
+		internal static ConfigEntry<bool> configEnableSosigPuncher;
 
 		internal static ConfigFile configFile;
 
@@ -365,6 +369,20 @@ namespace CiarencesUnbelievableModifications
 				"VirtualStockWeaponSpecificWhitelist",
 				string.Empty,
 				@"Specific weapons that should always have Virtual Stock on, takes priority over any blacklist. Needs to be the name that displays on the Wrist Menu. Format goes as follows: GunName|GunName ");
+
+			#endregion
+
+			#region experimental
+
+			configEnableSodaliteConsoleColorPatch = config.Bind(experimentalCatName,
+				"EnableSodaliteConsoleColorPatch",
+				false,
+				"Transpiles the Sodalite console so that CUM's custom console colour feature works, currently just recolours the entire console if one of CUM's extensions is used, oops");
+
+			configEnableSosigPuncher = config.Bind(experimentalCatName,
+				"EnableSosigPuncher",
+				false,
+				"Allows you to punch sosigs, supposed to, at least :)");
 
 			#endregion
 		}
