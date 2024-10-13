@@ -1,4 +1,5 @@
 ﻿//not worth it, would have to do some fuckery by adding a new FVRPhysicalObject that is always attached to the controller, can't be fucked really, no other way to do damage to sosigs, sorry :)
+using CiarencesUnbelievableModifications.Libraries;
 using FistVR;
 using HarmonyLib;
 using System;
@@ -9,7 +10,7 @@ using UnityEngine;
 
 namespace CiarencesUnbelievableModifications.Patches
 {
-	internal static class SosigPunchTest
+    internal static class SosigPunchTest
 	{
 		private static AccessTools.FieldRef<FVRInteractiveObject, Collider[]> m_collidersFieldRef = AccessTools.FieldRefAccess<FVRInteractiveObject, Collider[]>("m_colliders");
 

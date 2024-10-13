@@ -15,10 +15,10 @@ namespace CiarencesUnbelievableModifications.Patches
         private static void ReenableInstitutionPreviewScreen()
         {
             var panel = GameObject.Find("MainMenuSceneProtoBase/SceneScreens/SceneScreen_Screen14 (7)");
-            if (panel != null)
+            if (panel != null && !panel.activeSelf)
             {
                 panel.SetActive(true);
-				panel.transform.position = new Vector3(11.66f, -3.63f, 4.4f);
+				panel.transform.position = new Vector3(11.66f, -6.45f, 4.4f);
 				panel.transform.eulerAngles = new Vector3(0, 59.8033f, 0);
 			}
         }

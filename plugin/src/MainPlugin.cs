@@ -2,10 +2,13 @@
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
+using CiarencesUnbelievableModifications.MonoBehaviours;
 using CiarencesUnbelievableModifications.Patches;
+using CiarencesUnbelievableModifications.Libraries;
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
@@ -15,7 +18,7 @@ namespace CiarencesUnbelievableModifications
 {
     [BepInAutoPlugin]
 	[BepInDependency("nrgill28.Sodalite", BepInDependency.DependencyFlags.SoftDependency)] //makes the plugin load after Sodalite if it's installed, since I'm patching it and shtuff
-    [BepInProcess("h3vr.exe")]
+	[BepInProcess("h3vr.exe")]
     public partial class CiarencesUnbelievableModifications : BaseUnityPlugin
     {
         public static PluginInfo safehouseProgressionPlugin;
@@ -23,13 +26,25 @@ namespace CiarencesUnbelievableModifications
         public static PluginInfo betterHandsPlugin;
         public static bool isBetterHandsPalmingEnabled;
 
+		public static PluginInfo stovepipePlugin;
+
+		public const string HarmonyInstanceOwnerId = "CiarencesHarmonyInstanceIWILLKillYouInH3VRIfYouTouchIt";
+
 		internal static Harmony HarmonyInstance
 		{
 			get;
-		} = new Harmony("CiarencesHarmonyInstanceIWILLKillYouInH3VRIfYouTouchIt"); //is this even useful to have idk
+		} = new Harmony(HarmonyInstanceOwnerId); //is this even useful to have idk
+
+		public static CiarencesUnbelievableModifications Instance
+		{
+			get;
+			private set;
+		}
 
 		private void Awake()
 		{
+			Instance = this;
+
 			foreach (Type type in typeof(BepInPlugin).Assembly.GetTypes())
 			{
 				if (type.FullName == "BepInEx.ConsoleUtil.Kon")
@@ -96,14 +111,18 @@ namespace CiarencesUnbelievableModifications
 
 			HarmonyInstance.PatchAll(typeof(OptionGunCategoryBlacklister.Transpilers));
 
-			if (SettingsManager.configEnableSosigPuncher.Value) HarmonyInstance.PatchAll(typeof(SosigPunchTest));
+			HarmonyInstance.PatchAll(typeof(FireArmTweaks.AddChamberLoadingForMoreFireArms));
+
+			//HarmonyInstance.PatchAll(typeof(FVRTimedObjectDestructorManager.Patches));
+
+			HarmonyInstance.PatchAll(typeof(BepInExFunnyThing));
         }
 
 		static FieldInfo logColours;
 
         internal void CheckForIncompatibilites()
         {
-			Logger.LogMessage("Suicide protocol engaged.");
+			Logger.LogMessageWithColor("Suicide protocol engaged.", ConsoleColor.DarkRed);
             if (!Chainloader.PluginInfos.TryGetValue("NGA.SafehouseProgression", out safehouseProgressionPlugin))
             {
                 Chainloader.PluginInfos.TryGetValue("NGA.SafehouseMP", out safehouseProgressionPlugin); //there's a different version for MP, ffs
@@ -144,14 +163,15 @@ namespace CiarencesUnbelievableModifications
 
 					HarmonyMethod transpenis = new HarmonyMethod(AccessTools.Method(typeof(CiarencesUnbelievableModifications), nameof(CiarencesUnbelievableModifications.TranspileSodaliteConsoleUpdateText)));
 
-					PatchProcessor hi = HarmonyInstance.CreateProcessor(AccessTools.Method(logPage.GetType(), "UpdateText", new[] { typeof(bool) }));
-
-					hi.AddTranspiler(transpenis);
-
-					hi.Patch();
+					HarmonyInstance.Patch(AccessTools.Method(AccessTools.TypeByName("Sodalite.ModPanel.Pages.UniversalModPanelLogPage"), "UpdateText", new[] { typeof(bool) }), transpiler: transpenis);
 				}
 			}
-			Logger.LogMessage("Suicide postponed.");
+			Logger.LogMessageWithColor("Suicide postponed.", ConsoleColor.Green);
+
+			if (Chainloader.PluginInfos.TryGetValue("dll.smidgeon.failuretoeject", out stovepipePlugin))
+			{
+			
+			}
         }
 
 		internal static Dictionary<ConsoleColor, Color> m_C2Cdict = new Dictionary<ConsoleColor, Color>()
@@ -193,6 +213,7 @@ namespace CiarencesUnbelievableModifications
 		}
 
 		//no attribute because will dynamically patch later on, because I don't want to add a fucking dependency to this!!
+		[HarmonyWrapSafe]
 		internal static IEnumerable<CodeInstruction> TranspileSodaliteConsoleUpdateText(IEnumerable<CodeInstruction> instructions, ILGenerator generator, MethodBase __originalMethod)
 		{
 			CodeMatcher codeMatcher = new CodeMatcher(instructions, generator);

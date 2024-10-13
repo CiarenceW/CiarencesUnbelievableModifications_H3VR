@@ -7,7 +7,7 @@ using System.Reflection.Emit;
 using System.Text;
 using UnityEngine;
 
-namespace CiarencesUnbelievableModifications
+namespace CiarencesUnbelievableModifications.Libraries
 {
     public static class TranspilerHelper
     {
@@ -16,16 +16,16 @@ namespace CiarencesUnbelievableModifications
             codeMatcher = new CodeMatcher(instructions, generator).MatchForward(useEnd, codeMatches);
 
             if (logger == null) logger = Debug.LogError;
-            return (!codeMatcher.ReportFailure(__originalMethod, logger));
+            return !codeMatcher.ReportFailure(__originalMethod, logger);
         }
 
         public static bool TryMatchForward(this CodeMatcher codeMatcher, bool useEnd, MethodBase __originalMethod, params CodeMatch[] codeMatches)
         {
-			codeMatcher
-				.Start()
-				.MatchForward(useEnd, codeMatches);
+            codeMatcher
+                .Start()
+                .MatchForward(useEnd, codeMatches);
 
-            return (!codeMatcher.ReportFailure(__originalMethod, CiarencesUnbelievableModifications.Logger.LogError));
+            return !codeMatcher.ReportFailure(__originalMethod, CiarencesUnbelievableModifications.Logger.LogError);
         }
 
         public static void Print(this CodeMatcher codeMatcher, ConsoleColor color = ConsoleColor.DarkCyan)
@@ -35,17 +35,17 @@ namespace CiarencesUnbelievableModifications
             {
                 CiarencesUnbelievableModifications.Logger.LogMessageWithColor(instructs[i].ToString(), color);
             }
-		}
+        }
 
-		public static CodeMatcher CreateBranchAtMatch(this CodeMatcher codeMatcher, bool useEnd, out Label label, params CodeMatch[] codeMatches)
-		{
-			var clone = codeMatcher.Clone();
+        public static CodeMatcher CreateBranchAtMatch(this CodeMatcher codeMatcher, bool useEnd, out Label label, params CodeMatch[] codeMatches)
+        {
+            var clone = codeMatcher.Clone();
 
-			clone
-			.Start()
-			.MatchForward(useEnd, codeMatches);
+            clone
+            .Start()
+            .MatchForward(useEnd, codeMatches);
 
-			return codeMatcher.CreateLabelAt(clone.Pos, out label);
-		}
-	}
+            return codeMatcher.CreateLabelAt(clone.Pos, out label);
+        }
+    }
 }

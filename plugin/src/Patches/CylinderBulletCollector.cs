@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Reflection.Emit;
 using System.Reflection;
 using UnityEngine;
+using CiarencesUnbelievableModifications.Libraries;
 
 namespace CiarencesUnbelievableModifications.Patches
 {

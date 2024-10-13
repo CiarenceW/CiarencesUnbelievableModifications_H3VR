@@ -1,4 +1,5 @@
-﻿using FistVR;
+﻿using CiarencesUnbelievableModifications.Libraries;
+using FistVR;
 using HarmonyLib;
 using UnityEngine;
 
@@ -67,6 +68,103 @@ namespace CiarencesUnbelievableModifications.Patches
 			}
 		}
 
+		internal static class AddChamberLoadingForMoreFireArms
+		{
+			[HarmonyPatch(typeof(Handgun), nameof(Handgun.Awake))]
+			[HarmonyPostfix]
+			private static void AddChamberLoading(Handgun __instance)
+			{
+				if (__instance.AudioClipSet.ChamberManual.Clips.Count == 0)
+				{
+					__instance.AudioClipSet.ChamberManual.Clips = __instance.AudioClipSet.MagazineInsertRound.Clips;
+					__instance.AudioClipSet.ChamberManual.VolumeRange = Vector2.one * 0.6f;
+					__instance.AudioClipSet.ChamberManual.PitchRange = new Vector2(1.2f, 0.8f);
+				}
+
+				if (!__instance.Chamber.TryGetComponent<BoxCollider>(out var _)) //Maybe there's already one, idk whatever I don't care
+				{
+					var chamberLoadingTrigger = __instance.Chamber.AddComponent<BoxCollider>();
+					chamberLoadingTrigger.isTrigger = true;
+					chamberLoadingTrigger.size = new Vector3(0.01f, 0.01f, 0.1f);
+				}
+			}
+
+			[HarmonyPatch(typeof(Handgun), nameof(Handgun.UpdateDisplayRoundPositions))]
+			[HarmonyPostfix]
+			private static void SetNotManuallyAccessibleIfMagInserted(Handgun __instance)
+			{
+				if (__instance.Chamber.IsAccessible)
+				{
+					__instance.Chamber.IsAccessible = __instance.Magazine == null;
+				}
+			}
+
+			[HarmonyPatch(typeof(ClosedBoltWeapon), nameof(ClosedBoltWeapon.Awake))]
+			[HarmonyPostfix]
+			private static void AddChamberLoading(ClosedBoltWeapon __instance)
+			{
+				__instance.Chamber.IsManuallyChamberable = true;
+
+				if (!__instance.Chamber.TryGetComponent<BoxCollider>(out var _)) //Maybe there's already one, idk whatever I don't care
+				{
+					var chamberLoadingTrigger = __instance.Chamber.AddComponent<BoxCollider>();
+					chamberLoadingTrigger.isTrigger = true;
+					chamberLoadingTrigger.size = new Vector3(0.01f, 0.01f, 0.1f);
+				}
+			}
+
+			[HarmonyPatch(typeof(ClosedBolt), nameof(ClosedBolt.UpdateBolt))]
+			[HarmonyPostfix]
+			private static void AddChamberLoadingSupport(ClosedBolt __instance)
+			{
+				if (__instance.CurPos == ClosedBolt.BoltPos.Forward) //Handguns already do this, so all they need is a trigger for the bullet, closed bolt weapons don't have the accessible flag set anywhere
+				{
+					__instance.Weapon.Chamber.IsAccessible = false;
+				}
+				else
+				{
+					__instance.Weapon.Chamber.IsAccessible = true;
+				}
+			}
+
+			internal static class BullshitDoubleFeedPatchedSMIDGEONWHYDIDYOUMAKETHISSOCOMPLICATED
+			{
+				internal static AccessTools.FieldRef<object, float> fuckingDoubleFeedChanceFuckingFieldRefFucking;
+
+				[HarmonyPatch(typeof(HandgunSlide), nameof(HandgunSlide.SlideEvent_ExtractRoundFromMag))]
+				[HarmonyPrefix]
+				private static void MakeDoubleFeedHappenInTheMostConvolutedWayPossible(HandgunSlide __instance, out ThisIsJustATuple_Really<bool, float, object> __state)
+				{
+					__state = new();
+					if (__instance.Handgun.Chamber.GetRound() != null)
+					{
+						foreach (MonoBehaviour behaviour in __instance.GetComponents<MonoBehaviour>())
+						{
+							if (behaviour.GetType().Name.Contains("DoubleFeedData"))
+							{
+								if (fuckingDoubleFeedChanceFuckingFieldRefFucking == null) fuckingDoubleFeedChanceFuckingFieldRefFucking = AccessTools.FieldRefAccess<float>(behaviour.GetType(), "doubleFeedChance");
+								__state.a = true;
+								__state.b = fuckingDoubleFeedChanceFuckingFieldRefFucking.Invoke(behaviour);
+								__state.c = behaviour;
+								fuckingDoubleFeedChanceFuckingFieldRefFucking.Invoke(behaviour) = 1f; //FUCKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
+								break;
+							}
+						}
+					}
+				}
+
+				[HarmonyPatch(typeof(HandgunSlide), nameof(HandgunSlide.SlideEvent_ExtractRoundFromMag))]
+				[HarmonyPostfix]
+				private static void ResetDoubleFeedChances(ThisIsJustATuple_Really<bool, float, object> __state)
+				{
+					if (__state.a)
+					{
+						fuckingDoubleFeedChanceFuckingFieldRefFucking.Invoke(__state.c) = __state.b;
+					}
+				}
+			}
+		}
+
 		internal static class KnockAKDrumOut
 		{
 			[HarmonyPatch(typeof(FVRPhysicalObject), nameof(FVRPhysicalObject.OnCollisionEnter))]
@@ -105,6 +203,13 @@ namespace CiarencesUnbelievableModifications.Patches
 					}
 				}
 			}
+		}
+
+		internal struct ThisIsJustATuple_Really<A, B, C>()
+		{
+			public A a; 
+			public B b;
+			public C c;
 		}
 	}
 }

@@ -7,17 +7,13 @@ using UnityEngine;
 using CiarencesUnbelievableModifications.MonoBehaviours;
 using System;
 using BepInEx.Configuration;
+using CiarencesUnbelievableModifications.Libraries;
 
 namespace CiarencesUnbelievableModifications.Patches
 {
     public static class MagRetentionTweaks
     {
-        public static float magRetentionMinimumDistanceThreshold;
-
-        //probably should use Vector3.Axis instead of Vector3.Dot, lol
-        public static float magRetentionDotProductThreshold;
-
-        public static float timeTouchpadHeldDown;
+		private static float timeTouchpadHeldDown;
 
         //I hate labels and branches, rather do this instead
         public static bool CheckForQuickReleaseEligibility(FVRViveHand hand)
@@ -43,7 +39,8 @@ namespace CiarencesUnbelievableModifications.Patches
         internal static class MagRetentionTweaksHarmonyFixes
         {
             [HarmonyPatch(typeof(FVRFireArmMagazine), nameof(FVRFireArmMagazine.UpdateInteraction))]
-            [HarmonyPostfix]
+			[HarmonyWrapSafe]
+			[HarmonyPostfix]
             private static void PatchUpdateInteractionHoldingTouchPadDown(FVRViveHand hand)
             {
                 if (hand.IsInStreamlinedMode && hand.Input.AXButtonPressed)
@@ -125,7 +122,8 @@ namespace CiarencesUnbelievableModifications.Patches
                 {
 					SettingsManager.LogVerboseLevelNameAndColor($"Patching {MethodBase.GetCurrentMethod().Name}", "MRT-Transpilers", System.ConsoleColor.Cyan);
 
-					codeMatcher.SetAndAdvance(OpCodes.Ldsfld, AccessTools.Field(typeof(MagRetentionTweaks), nameof(magRetentionMinimumDistanceThreshold)));
+					codeMatcher.SetAndAdvance(OpCodes.Ldsfld, AccessTools.Field(typeof(SettingsManager), nameof(SettingsManager.configMagRetentionMinimumDistanceThreshold)))
+						.InsertAndAdvance(new CodeInstruction(OpCodes.Call, AccessTools.PropertyGetter(typeof(ConfigEntry<>).MakeGenericType(typeof(float)), nameof(ConfigEntry<float>.Value))));
                     //thanks Szikaka (we copy the label of the current branch...)
                     var branchOperand = codeMatcher.Operand;
 
@@ -144,7 +142,8 @@ namespace CiarencesUnbelievableModifications.Patches
                         .InsertAndAdvance(new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(FVRFireArm), nameof(FVRFireArm.GetMagEjectPos), new[] { typeof(bool) })))
                         .InsertAndAdvance(new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(Transform), "get_up")))
                         .InsertAndAdvance(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Vector3), nameof(Vector3.Dot), new[] { typeof(Vector3), typeof(Vector3) })))
-                        .InsertAndAdvance(new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(MagRetentionTweaks), nameof(magRetentionDotProductThreshold))))
+                        .InsertAndAdvance(new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(SettingsManager), nameof(SettingsManager.configMagRetentionMinimumDotThreshold))),
+						new CodeInstruction(OpCodes.Call, AccessTools.PropertyGetter(typeof(ConfigEntry<>).MakeGenericType(typeof(float)), nameof(ConfigEntry<float>.Value))))
 
                         //... and we paste that bitch right here so we don't have to bother :)
                         .InsertAndAdvance(new CodeInstruction(OpCodes.Ble_Un_S, branchOperand))
