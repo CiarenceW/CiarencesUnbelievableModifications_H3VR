@@ -187,17 +187,33 @@ namespace CiarencesUnbelievableModifications.Patches
 							if (gun.Magazine != null && !gun.Magazine.IsIntegrated && !gun.Magazine.GetCanPalm())
 							{
 								SettingsManager.LogVerboseInfo("Has PhysicalMagazineReleaseLatch");
-
-								if (gun.m_hand != null && gun.m_hand.Input.TouchpadPressed && Vector2.Distance(gun.m_hand.Input.TouchpadAxes, Vector2.down) < 45f)
+								if (gun.m_hand != null)
 								{
-									if (!gun.m_hand.IsInStreamlinedMode)
+									bool shouldEject = false;
+
+									if (gun.m_hand.IsInStreamlinedMode)
+									{
+										if (gun.m_hand.Input.AXButtonPressed)
+										{
+											shouldEject = true;
+										}
+									}
+									else
+									{
+										if (gun.m_hand.Input.TouchpadPressed && Vector2.Distance(gun.m_hand.Input.TouchpadAxes, Vector2.down) < 45f)
+										{
+											shouldEject = true;
+										}
+
+										SettingsManager.LogVerboseInfo(Vector2.Distance(gun.m_hand.Input.TouchpadAxes, Vector2.down) < 45f);
+									}
+
+									if (shouldEject)
 									{
 										SettingsManager.LogVerboseInfo("Bump ejecting mag!");
 										gun.EjectMag(true);
 									}
 								}
-
-								SettingsManager.LogVerboseInfo(Vector2.Distance(gun.m_hand.Input.TouchpadAxes, Vector2.down) < 45f);
 							}
 						}
 					}

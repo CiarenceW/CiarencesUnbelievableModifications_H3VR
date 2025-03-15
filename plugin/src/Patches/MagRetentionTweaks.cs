@@ -11,6 +11,7 @@ using CiarencesUnbelievableModifications.Libraries;
 
 namespace CiarencesUnbelievableModifications.Patches
 {
+    //2025 ciarence here, christ this code sucks
     public static class MagRetentionTweaks
     {
 		private static float timeTouchpadHeldDown;
@@ -18,21 +19,14 @@ namespace CiarencesUnbelievableModifications.Patches
         //I hate labels and branches, rather do this instead
         public static bool CheckForQuickReleaseEligibility(FVRViveHand hand)
         {
-            //these are from when I was debugging. I don't want to change any of it because
-            //I'm scared it'll somehow not work anymore even though I fixed the thing that wasn't working
-            var streamlined = (hand.IsInStreamlinedMode && hand.Input.AXButtonUp);
-
-            var notstreamlined = (!hand.IsInStreamlinedMode && hand.Input.TouchpadUp);
-
-            var heldDownCheck = (SettingsManager.configEnableQuickRetainedMagReleaseMaximumHoldTime.Value == true && 
-                    (timeTouchpadHeldDown >= SettingsManager.configQuickRetainedMagReleaseMaximumHoldTime.Value)) ||
-                        SettingsManager.configEnableQuickRetainedMagReleaseMaximumHoldTime.Value == false;
+            //the logic is here is that, if you press the palm mag button really quickly, it won't activate the quick release
+            var heldDownCheck = (SettingsManager.configEnableQuickRetainedMagReleaseMaximumHoldTime.Value == true && timeTouchpadHeldDown >= SettingsManager.configQuickRetainedMagReleaseMaximumHoldTime.Value) || SettingsManager.configEnableQuickRetainedMagReleaseMaximumHoldTime.Value == false;
 
             SettingsManager.LogVerboseInfo("Max time enabled: " + SettingsManager.configEnableQuickRetainedMagReleaseMaximumHoldTime.Value);
             SettingsManager.LogVerboseInfo("Time held: " + timeTouchpadHeldDown);
             SettingsManager.LogVerboseInfo($"thus, heldDownCheck is {heldDownCheck}");
 
-            var result = (SettingsManager.configEnableQuickRetainedMagRelease.Value && (streamlined || notstreamlined)) && heldDownCheck;
+            var result = SettingsManager.configEnableQuickRetainedMagRelease.Value && heldDownCheck;
             return result;
         }
 
@@ -70,6 +64,7 @@ namespace CiarencesUnbelievableModifications.Patches
                     new CodeMatch(OpCodes.Stloc_0)
 
                     //aren't these supposed to be like "oh hey who cares about the operand let's just check the opcode"? if so, why doesn't it fucking work
+                    //it probably doesn't work because one of the opcodes from the base was changed because harmony hates me
                     //new CodeMatch(OpCodes.Bge_Un_S),
                     //new CodeMatch(OpCodes.Ldc_I4_1),
                     //new CodeMatch(OpCodes.Stloc_0)
