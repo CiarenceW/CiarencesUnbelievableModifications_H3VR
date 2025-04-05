@@ -85,6 +85,8 @@ namespace CiarencesUnbelievableModifications
 
 		private void PatchAll()
         {
+			HarmonyInstance.PatchAll(typeof(BepInExFunnyThing));
+
             HarmonyInstance.PatchAll(typeof(MagRetentionTweaks.MagRetentionTweaksTranspilers));
 			HarmonyInstance.PatchAll(typeof(MagRetentionTweaks.MagRetentionTweaksHarmonyFixes));
 
@@ -113,9 +115,9 @@ namespace CiarencesUnbelievableModifications
 
 			HarmonyInstance.PatchAll(typeof(FireArmTweaks.AddChamberLoadingForMoreFireArms));
 
-			//HarmonyInstance.PatchAll(typeof(FVRTimedObjectDestructorManager.Patches));
+			HarmonyInstance.PatchAll(typeof(FireArmTweaks.IncrementalSmoothing));
 
-			HarmonyInstance.PatchAll(typeof(BepInExFunnyThing));
+			//HarmonyInstance.PatchAll(typeof(FVRTimedObjectDestructorManager.Patches));
         }
 
 		static FieldInfo logColours;

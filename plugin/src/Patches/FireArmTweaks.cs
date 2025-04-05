@@ -1,4 +1,9 @@
-﻿using CiarencesUnbelievableModifications.Libraries;
+﻿using System.Collections.Generic;
+using System.ComponentModel;
+using System.Reflection;
+using System.Reflection.Emit;
+using BepInEx.Configuration;
+using CiarencesUnbelievableModifications.Libraries;
 using FistVR;
 using HarmonyLib;
 using UnityEngine;
@@ -219,6 +224,106 @@ namespace CiarencesUnbelievableModifications.Patches
 					}
 				}
 			}
+		}
+
+		internal static class IncrementalSmoothing
+		{
+			[HarmonyPatch(typeof(FVRPhysicalObject), "FU")]
+			[HarmonyTranspiler]
+			private static IEnumerable<CodeInstruction> AddIncrementalSmoothingThing(IEnumerable<CodeInstruction> instructions, ILGenerator generator, MethodBase __originalMethod)
+			{
+				CodeMatcher codeMatcher = new CodeMatcher(instructions, generator);
+
+				if (codeMatcher.TryMatchForward(true, __originalMethod,
+					new CodeMatch(OpCodes.Ldarg_0),
+					new CodeMatch(OpCodes.Call, AccessTools.PropertyGetter(typeof(FVRPhysicalObject), nameof(FVRPhysicalObject.AltGrip))),
+					new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(FVRInteractiveObject), nameof(FVRInteractiveObject.m_hand))),
+					new CodeMatch(OpCodes.Ldflda, AccessTools.Field(typeof(FVRViveHand), nameof(FVRViveHand.Input))),
+					new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(HandInput), nameof(HandInput.TriggerPressed))),
+					new CodeMatch(OpCodes.Brfalse)
+					))
+				{
+					var triggerPressedBrTrue = generator.DefineLabel();
+
+					var thisIsForWhenItsFalse = (Label)codeMatcher.Operand;
+
+					codeMatcher.InsertAndAdvance(
+						new CodeInstruction(OpCodes.Brtrue_S, triggerPressedBrTrue),
+
+						new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(SettingsManager), nameof(SettingsManager.configEnableIncrementalHandSmoothing))),
+						new CodeInstruction(OpCodes.Callvirt, AccessTools.PropertyGetter(typeof(ConfigEntry<bool>), nameof(ConfigEntry<bool>.Value)))
+					)
+					.Advance(1)
+					.InsertAndAdvance(	
+						new CodeInstruction(OpCodes.Ldarg_0),
+						new CodeInstruction(OpCodes.Call, AccessTools.PropertyGetter(typeof(FVRPhysicalObject), nameof(FVRPhysicalObject.AltGrip))),
+						new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(FVRInteractiveObject), nameof(FVRInteractiveObject.m_hand))),
+						new CodeInstruction(OpCodes.Ldflda, AccessTools.Field(typeof(FVRViveHand), nameof(FVRViveHand.Input))),
+						new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(HandInput), nameof(HandInput.TriggerFloat))),
+						new CodeInstruction(OpCodes.Ldc_R4, 0f),
+						new CodeInstruction(OpCodes.Ble_Un, thisIsForWhenItsFalse)
+					)
+					.Labels.Add(triggerPressedBrTrue)
+					;
+
+					if (codeMatcher.TryMatchForward(false, __originalMethod,
+						new CodeMatch(OpCodes.Ldloc_S, null),
+						new CodeMatch(OpCodes.Ldc_R4, 1.35f),
+						new CodeMatch(OpCodes.Call, AccessTools.Method(typeof(Mathf), nameof(Mathf.Pow), [typeof(float), typeof(float)])),
+						new CodeMatch(OpCodes.Stloc_S, null)
+						))
+					{
+
+						var brTrueLabel = generator.DefineLabel();
+						var brLabel = generator.DefineLabel();
+
+						codeMatcher
+						.InsertAndAdvance(
+							new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(SettingsManager), nameof(SettingsManager.configEnableIncrementalHandSmoothing))),
+							new CodeInstruction(OpCodes.Callvirt, AccessTools.PropertyGetter(typeof(ConfigEntry<bool>), nameof(ConfigEntry<bool>.Value))),
+							new CodeInstruction(OpCodes.Brtrue_S, brTrueLabel)
+						)
+						.Advance(4)
+						.InsertAndAdvance(
+							new CodeInstruction(OpCodes.Br_S, brLabel),
+
+							new CodeInstruction(OpCodes.Ldloc_S, 69).WithLabels(brTrueLabel), //omg!!!!!!! dude!!!!! it's the SEX number!!!! HAHAHAHAHAHAH this is so fucking funny!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+							new CodeInstruction(OpCodes.Ldarg_0),
+							new CodeInstruction(OpCodes.Callvirt, AccessTools.PropertyGetter(typeof(FVRPhysicalObject), nameof(FVRPhysicalObject.AltGrip))),
+							new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(FVRInteractiveObject), nameof(FVRInteractiveObject.m_hand))),
+							new CodeInstruction(OpCodes.Ldflda, AccessTools.Field(typeof(FVRViveHand), nameof(FVRViveHand.Input))),
+							new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(HandInput), nameof(HandInput.TriggerFloat))),
+							new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(SettingsManager), nameof(SettingsManager.configIncrementalHandSmoothingMaxStrength))),
+							new CodeInstruction(OpCodes.Callvirt, AccessTools.PropertyGetter(typeof(ConfigEntry<float>), nameof(ConfigEntry<float>.Value))),
+							new CodeInstruction(OpCodes.Mul),
+							new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Mathf), nameof(Mathf.Pow), [typeof(float), typeof(float)])),
+							new CodeInstruction(OpCodes.Stloc_S, 69)
+						)
+						.Labels.Add(brLabel)
+						;
+					}
+				}
+
+				codeMatcher.Print();
+
+				return codeMatcher.InstructionEnumeration();
+			}
+
+			/*[HarmonyPatch(typeof(FVRPhysicalObject), "FU")]
+			[LocalVariableAccessor] //I fucking love this
+			[HarmonyPostfix]
+			private static void LogThing(FVRPhysicalObject __instance, float __localVariable_69)
+			{
+				if (__instance.AltGrip && __instance.AltGrip.m_hand) 
+				{
+					var input = __instance.AltGrip.m_hand.Input;
+
+					CiarencesUnbelievableModifications.Logger.LogInfo($"GetMinWhatever: {__instance.GetMinStabilizationAllowanceFactor()}");
+					CiarencesUnbelievableModifications.Logger.LogInfo($"__localVariable69: {__localVariable_69}");
+					CiarencesUnbelievableModifications.Logger.LogInfo($"Is trigger pressed: {input.TriggerPressed}");
+					CiarencesUnbelievableModifications.Logger.LogInfo($"TriggerFloat: {input.TriggerFloat}");
+				}
+			}*/
 		}
 
 		internal struct ThisIsJustATuple_Really<A, B, C>()

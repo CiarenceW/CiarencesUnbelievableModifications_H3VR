@@ -7,6 +7,7 @@ using CiarencesUnbelievableModifications.MonoBehaviours;
 using FistVR;
 using BepInEx.Logging;
 using CiarencesUnbelievableModifications.Libraries;
+using System.Drawing;
 
 namespace CiarencesUnbelievableModifications
 {
@@ -27,6 +28,8 @@ namespace CiarencesUnbelievableModifications
 		const string easyMagLoadingCategoryBlacklistCatName = "Easy Mag Loading Category Blacklist";
 		const string virtualStockCategoryBlacklistCatName = "Virtual Stock Category Blacklist";
 		const string experimentalCatName = "Experimental stuff, might not work ^^ (probably requires restart)";
+
+		const string incrementalGunSmoothingCatName = "Incremental Gun Smoothing";
 
 		internal static bool Verbose
 		{
@@ -100,6 +103,10 @@ namespace CiarencesUnbelievableModifications
 		internal static ConfigEntry<bool> configTODEmptyMagazinesOnly;
 		internal static ConfigEntry<bool> configTODEnableRounds;
 		internal static ConfigEntry<bool> configTODEnableAll;
+
+		internal static ConfigEntry<bool> configEnableIncrementalHandSmoothing;
+
+		internal static ConfigEntry<float> configIncrementalHandSmoothingMaxStrength;
 
 		internal static void InitializeAndBindSettings(ConfigFile config)
 		{
@@ -397,6 +404,20 @@ namespace CiarencesUnbelievableModifications
 				"EnableAllTimedObjectDestruction",
 				false,
 				"Starts destruction countdown timer for everything that gets deleted by the \"All Spawnables\" option in the hand menu");
+
+			#endregion
+
+			#region IncrementalSmoothing
+
+			configEnableIncrementalHandSmoothing = config.Bind(incrementalGunSmoothingCatName,
+				"EnableIncrementalHandSmoothing",
+				false,
+				"Allows you to control with the trigger the amount of smoothing applied when stabilising long arms");
+
+			configIncrementalHandSmoothingMaxStrength = config.Bind(incrementalGunSmoothingCatName,
+				"IncrementalHandSmoothingMaxStrength",
+				1f,
+				"How strong the effect will be when the trigger is fully pressed (this is just a markiplier)");
 
 			#endregion
 

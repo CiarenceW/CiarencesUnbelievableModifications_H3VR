@@ -17,16 +17,22 @@ namespace CiarencesUnbelievableModifications.Patches
 		private static float timeTouchpadHeldDown;
 
         //I hate labels and branches, rather do this instead
+        //and I fucking hate you, what the fuck is this? moron
         public static bool CheckForQuickReleaseEligibility(FVRViveHand hand)
         {
             //the logic is here is that, if you press the palm mag button really quickly, it won't activate the quick release
             var heldDownCheck = (SettingsManager.configEnableQuickRetainedMagReleaseMaximumHoldTime.Value == true && timeTouchpadHeldDown >= SettingsManager.configQuickRetainedMagReleaseMaximumHoldTime.Value) || SettingsManager.configEnableQuickRetainedMagReleaseMaximumHoldTime.Value == false;
 
+            //this is awful, like I can't overstate how fucking mad this code made me, from the shit inaccurate comment that made me remove these, to the bad variable naming, 2023 ciarence needs to ermmmmmmmmmmmmmmmmmmmmmmmmm I can't say it :)
+            //anyways this checks if you're still holding shit, yeah
+            var streamlinedCheck = (hand.IsInStreamlinedMode && hand.Input.AXButtonUp); 
+            var classicCheck = (!hand.IsInStreamlinedMode && hand.Input.TouchpadUp);
+
             SettingsManager.LogVerboseInfo("Max time enabled: " + SettingsManager.configEnableQuickRetainedMagReleaseMaximumHoldTime.Value);
             SettingsManager.LogVerboseInfo("Time held: " + timeTouchpadHeldDown);
             SettingsManager.LogVerboseInfo($"thus, heldDownCheck is {heldDownCheck}");
 
-            var result = SettingsManager.configEnableQuickRetainedMagRelease.Value && heldDownCheck;
+            var result = SettingsManager.configEnableQuickRetainedMagRelease.Value && heldDownCheck && (streamlinedCheck || classicCheck);
             return result;
         }
 
@@ -41,7 +47,7 @@ namespace CiarencesUnbelievableModifications.Patches
                 {
                     timeTouchpadHeldDown += Time.deltaTime;
                 }
-                else if (!hand.IsInStreamlinedMode && hand.Input.TouchpadDown && Vector2.Angle(hand.Input.TouchpadAxes, Vector2.down) < 55f)
+                else if (!hand.IsInStreamlinedMode && hand.Input.TouchpadPressed && Vector2.Angle(hand.Input.TouchpadAxes, Vector2.down) < 55f)
                 {
                     timeTouchpadHeldDown += Time.deltaTime;
                 }
@@ -80,7 +86,7 @@ namespace CiarencesUnbelievableModifications.Patches
                         .InsertAndAdvance(new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(FVRFireArmMagazine), nameof(FVRFireArmMagazine.m_magChild))))
                         .InsertAndAdvance(new CodeInstruction(OpCodes.Ldnull))
                         .InsertAndAdvance(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(UnityEngine.Object), "op_Inequality", new[] { typeof(UnityEngine.Object), typeof(UnityEngine.Object) })))
-                  /*->*///adding a branch here later on. Could do it right now but I'm superstitious.
+                  /*->*///adding a branch here later on. Could do it right now but I'm superstitious. no you're a fucking moron
                   /*|*/
                   /*|*/ //flag = MagRetentionTweaks.CheckForQuickReleaseEligibility(hand);
                   /*|*/ .InsertAndAdvance(new CodeInstruction(OpCodes.Ldarg_1))

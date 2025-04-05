@@ -294,8 +294,6 @@ namespace CiarencesUnbelievableModifications.Patches
 				}
 			}
 
-			private static FieldInfo m_hoverOverReloadTriggerFieldInfo;
-
 			[HarmonyPatch(typeof(FVRFireArmRound), nameof(FVRFireArmRound.BeginInteraction))]
 			[HarmonyPostfix]
 			private static void TryAddPoseExtenderPoses(FVRFireArmRound __instance)
