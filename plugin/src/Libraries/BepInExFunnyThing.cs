@@ -4,12 +4,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
 using HarmonyLib.Public.Patching;
 using static System.Reflection.Emit.OpCodes;
 using static CiarencesUnbelievableModifications.CiarencesUnbelievableModifications;
-using CiarencesUnbelievableModifications.MonoBehaviours;
 using UnityEngine;
+using JetBrains.Annotations;
 
 namespace CiarencesUnbelievableModifications.Libraries
 {
@@ -21,14 +20,40 @@ namespace CiarencesUnbelievableModifications.Libraries
     ///			See explanation as to why I made it a mandatory attribute.
     ///		</seealso>
     /// </remarks>
+    [AttributeUsage(AttributeTargets.Parameter | AttributeTargets.Method)]
     public class LocalVariableAccessorAttribute : Attribute
     {
+        /// <summary>
+        /// This is is for parameters, you pass it like this:
+        /// <code>
+        ///     static IEnumerable<CodeInstruction> Transpiler([LocalVariableAccessor(5)] int thisCanBeAnyName)
+        /// </code>
+        /// </summary>
+        /// <param name="variableIndex">
+        ///     The index of the local variable
+        /// </param>
+        public LocalVariableAccessorAttribute(int variableIndex)
+        {
+            VariableIndex = variableIndex;
+        }
+
+        public LocalVariableAccessorAttribute()
+        {
+
+        }
+
+        public int VariableIndex
+        {
+            get;
+            private set;
+        }
     }
 
     internal static class BepInExFunnyThing
     {
         private static readonly string LOCAL_VARIABLE_PREFIX = "__localVariable_";
 
+        //this thing's purpose is for me to check the IL, it's not used, and the actual transpile works slightly differently
         private static void AddLocalVariablePatchArgument(MethodBase original, MethodInfo patch, bool allowFirsParamPassthrough)
         {
             var list = original.GetParameters().ToList();
@@ -42,24 +67,13 @@ namespace CiarencesUnbelievableModifications.Libraries
 
             foreach (ParameterInfo parameterInfo in list)
             {
-                if (parameterInfo.Name.StartsWith(LOCAL_VARIABLE_PREFIX, StringComparison.Ordinal))
+				if (parameterInfo.Name.StartsWith("__localVariable_", StringComparison.Ordinal))
                 {
-                    if (Attribute.GetCustomAttribute(patch, typeof(HarmonyPostfix)) == null && patch.Name != "Postfix")
+                    if (Attribute.GetCustomAttribute(patch, typeof(HarmonyPostfix)) == null || (patch.Name != "Postfix"))
                     {
                         throw new Exception($"The {parameterInfo.Name} patch parameter is only useful on postfixes");
                     }
-
-                    string[] allowedHarmonyInstances = [HarmonyInstance.Id];
-
-                    var patchInfo = Harmony.GetPatchInfo(original);
-                    foreach (var thing in patchInfo.Postfixes)
-                    {
-                        if (!allowedHarmonyInstances.Contains(thing.owner))
-                        {
-                            throw new Exception($"{patch.Name} wasn't patched by a valid Harmony instance, transpile it to the list :)");
-                        }
-                    }
-
+                    
                     var localIndexStr = parameterInfo.Name.Substring(LOCAL_VARIABLE_PREFIX.Length);
 
                     if (int.TryParse(localIndexStr, out var localIndex))
@@ -90,7 +104,6 @@ namespace CiarencesUnbelievableModifications.Libraries
                 }
             }
         }
-
         /*internal static Mono.Cecil.Cil.OpCode lastOpCode;
 
 		[HarmonyPatch(typeof(Mono.Cecil.Cil.Instruction), nameof(Mono.Cecil.Cil.Instruction.Create), [typeof(Mono.Cecil.Cil.OpCode)])]
@@ -150,6 +163,8 @@ namespace CiarencesUnbelievableModifications.Libraries
 
                 var originalMethodLocalVariables = generator.DeclareLocal(typeof(IList<LocalVariableInfo>));
 
+                var storedLocalVariableAccessor = generator.DeclareLocal(typeof(LocalVariableAccessorAttribute));
+
                 //Get the label from the branches :)
 
                 var thisIsTheBrThatGoesToTheLoopThing = (Label)codeMatcher.Instruction.operand;
@@ -175,6 +190,10 @@ namespace CiarencesUnbelievableModifications.Libraries
 
                 var hasLocalAccessorAttribute = generator.DefineLabel();
 
+                var alreadyHaveTheNumLabel = generator.DefineLabel();
+
+                var skipOverGettingTheLocalVariableIndexFromAccessorIndexLabel = generator.DefineLabel();
+                
                 codeMatcher.InsertAndAdvance(
                     [
 							//         if (parameterInfo.Name.StartsWith("__localVariable_"))
@@ -185,18 +204,21 @@ namespace CiarencesUnbelievableModifications.Libraries
                             new CodeInstruction(Callvirt, AccessTools.Method(typeof(string), nameof(string.StartsWith), [typeof(string), typeof(StringComparison)])),
                             new CodeInstruction(Brfalse, thisIsTheBrThatGoesToTheOtherThing),
 
+                            //              if (Attribute.GetCustomAttribute(patch, typeof(HarmonyPostfix)) == null) ||
                             new CodeInstruction(Ldarg_2),
                             new CodeInstruction(Ldtoken, typeof(HarmonyPostfix)),
                             new CodeInstruction(Call, AccessTools.Method(typeof(Type), nameof(Type.GetTypeFromHandle), [typeof(RuntimeTypeHandle)])),
                             new CodeInstruction(Call, AccessTools.Method(typeof(Attribute), nameof(Attribute.GetCustomAttribute), [typeof(MemberInfo), typeof(Type)])),
                             new CodeInstruction(Brtrue_S, isPostfixLabel),
 
+                            //              (patch.Name != "Postfix")
                             new CodeInstruction(Ldarg_2),
                             new CodeInstruction(Callvirt, AccessTools.PropertyGetter(typeof(MemberInfo), nameof(MemberInfo.Name))),
                             new CodeInstruction(Ldstr, "Postfix"),
                             new CodeInstruction(Call, AccessTools.Method(typeof(string), "op_Inequality")),
                             new CodeInstruction(Brfalse_S, isPostfixLabel),
 
+                            //                 throw new Exception($"The {parameterInfo.Name} patch parameter is only useful on postfixes");
                             new CodeInstruction(Ldstr, "The "),
                             new CodeInstruction(Ldloc_S, 5),
                             new CodeInstruction(Callvirt, AccessTools.PropertyGetter(typeof(ParameterInfo), nameof(ParameterInfo.Name))),
@@ -205,18 +227,34 @@ namespace CiarencesUnbelievableModifications.Libraries
                             new CodeInstruction(Newobj, AccessTools.Constructor(typeof(Exception), [typeof(string)])),
                             new CodeInstruction(Throw),
 
+                            //              if (Attribute.GetCustomAttribute(patch, typeof(LocalVariableAccessorAttribute)) != null) ||
                             new CodeInstruction(Ldarg_2).WithLabels(isPostfixLabel),
                             new CodeInstruction(Ldtoken, typeof(LocalVariableAccessorAttribute)),
                             new CodeInstruction(Call, AccessTools.Method(typeof(Type), nameof(Type.GetTypeFromHandle), [typeof(RuntimeTypeHandle)])),
                             new CodeInstruction(Call, AccessTools.Method(typeof(Attribute), nameof(Attribute.GetCustomAttribute), [typeof(MemberInfo), typeof(Type)])),
-                            new CodeInstruction(Brtrue_S, hasLocalAccessorAttribute),
+                            new CodeInstruction(Brtrue_S, hasLocalAccessorAttribute), //brtrue also null checks, pretty cool!
 
-                            new CodeInstruction(Ldstr, "You need a LocalVariableAccessor attribute on your postfix if you want to use the __localVariable_X patch parameter"),
+                            //              if ((var storedLocalVariableAccessor = Attribute.GetCustomAttribute(parameterInfo, typeof(LocalVariableAccessorAttribute))) != null)
+                            new CodeInstruction(Ldloc_S, 5),
+                            new CodeInstruction(Ldtoken, typeof(LocalVariableAccessorAttribute)),
+                            new CodeInstruction(Call, AccessTools.Method(typeof(Type), nameof(Type.GetTypeFromHandle), [typeof(RuntimeTypeHandle)])),
+                            new CodeInstruction(Call, AccessTools.Method(typeof(Attribute), nameof(Attribute.GetCustomAttribute), [typeof(ParameterInfo), typeof(Type)])),
+                            new CodeInstruction(Castclass, typeof(LocalVariableAccessorAttribute)),
+                            new CodeInstruction(Stloc_S, storedLocalVariableAccessor.LocalIndex),
+                            new CodeInstruction(Ldloc_S, storedLocalVariableAccessor.LocalIndex),
+                            new CodeInstruction(Brtrue_S, hasLocalAccessorAttribute), //brtrue also null checks, pretty cool!
+
+                            //                 throw new Exception("You need a LocalVariableAccessor attribute on your postfix or parameter if you want to use the __localVariable_X patch parameter");
+                            new CodeInstruction(Ldstr, "You need a LocalVariableAccessor attribute on your postfix or parameter if you want to use the __localVariable_X patch parameter"),
                             new CodeInstruction(Newobj, AccessTools.Constructor(typeof(Exception), [typeof(string)])),
                             new CodeInstruction(Throw),
 
-							//             string text = parameterInfo.Name.Substring("__localVariable_".Length);
-							new CodeInstruction(Ldloc_S, 5).WithLabels(hasLocalAccessorAttribute),
+                            //              if (storedLocalVariableAccessor != null)
+                            new CodeInstruction(Ldloc_S, storedLocalVariableAccessor.LocalIndex).WithLabels(hasLocalAccessorAttribute),
+                            new CodeInstruction(Brtrue_S, alreadyHaveTheNumLabel),
+
+							//             if (int.TryParse(parameterInfo.Name.Substring("__localVariable_".Length), out int num))
+							new CodeInstruction(Ldloc_S, 5),
                             new CodeInstruction(Callvirt, AccessTools.PropertyGetter(typeof(ParameterInfo), nameof(ParameterInfo.Name))),
                             new CodeInstruction(Ldsfld, AccessTools.Field(typeof(BepInExFunnyThing), nameof(LOCAL_VARIABLE_PREFIX))),
                             new CodeInstruction(Callvirt, AccessTools.PropertyGetter(typeof(string), nameof(string.Length))),
@@ -224,9 +262,15 @@ namespace CiarencesUnbelievableModifications.Libraries
                             new CodeInstruction(Ldloca_S, localVariableNum.LocalIndex),
                             new CodeInstruction(Call, AccessTools.Method(typeof(int), nameof(Int32.TryParse), [typeof(string), typeof(int).MakeByRefType()])),
                             new CodeInstruction(Brfalse, noVariableIndex),
+                            new CodeInstruction(Br_S, skipOverGettingTheLocalVariableIndexFromAccessorIndexLabel),
+
+                            //              num = storedLocalVariableAccessor.VariableIndex
+                            new CodeInstruction(Ldloc_S, storedLocalVariableAccessor.LocalIndex).WithLabels(alreadyHaveTheNumLabel),
+                            new CodeInstruction(Callvirt, AccessTools.PropertyGetter(typeof(LocalVariableAccessorAttribute), nameof(LocalVariableAccessorAttribute.VariableIndex))),
+                            new CodeInstruction(Stloc_S, localVariableNum.LocalIndex),
 
 							//             IList<LocalVariableInfo> localVariables = original.GetMethodBody().LocalVariables;
-							new CodeInstruction(Ldarg_1),
+							new CodeInstruction(Ldarg_1).WithLabels(skipOverGettingTheLocalVariableIndexFromAccessorIndexLabel),
                             new CodeInstruction(Callvirt, AccessTools.Method(typeof(MethodBase), nameof(MethodBase.GetMethodBody))),
                             new CodeInstruction(Callvirt, AccessTools.PropertyGetter(typeof(MethodBody), nameof(MethodBody.LocalVariables))),
                             new CodeInstruction(Stloc, originalMethodLocalVariables.LocalIndex),

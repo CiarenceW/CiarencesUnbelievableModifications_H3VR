@@ -73,6 +73,7 @@ namespace CiarencesUnbelievableModifications.Patches
 			}
 		}
 
+		//forgot i started this, oops
 		internal static class AddChamberLoadingForMoreFireArms
 		{
 			[HarmonyPatch(typeof(Handgun), nameof(Handgun.Awake))]
@@ -304,26 +305,23 @@ namespace CiarencesUnbelievableModifications.Patches
 					}
 				}
 
-				codeMatcher.Print();
-
 				return codeMatcher.InstructionEnumeration();
 			}
 
-			/*[HarmonyPatch(typeof(FVRPhysicalObject), "FU")]
-			[LocalVariableAccessor] //I fucking love this
+			[HarmonyPatch(typeof(FVRPhysicalObject), "FU")]
 			[HarmonyPostfix]
-			private static void LogThing(FVRPhysicalObject __instance, float __localVariable_69)
+			private static void LogThing(FVRPhysicalObject __instance, [LocalVariableAccessor(69)] float __localVariable_num15)
 			{
 				if (__instance.AltGrip && __instance.AltGrip.m_hand) 
 				{
 					var input = __instance.AltGrip.m_hand.Input;
 
 					CiarencesUnbelievableModifications.Logger.LogInfo($"GetMinWhatever: {__instance.GetMinStabilizationAllowanceFactor()}");
-					CiarencesUnbelievableModifications.Logger.LogInfo($"__localVariable69: {__localVariable_69}");
+					CiarencesUnbelievableModifications.Logger.LogInfo($"__localVariable69: {__localVariable_num15}");
 					CiarencesUnbelievableModifications.Logger.LogInfo($"Is trigger pressed: {input.TriggerPressed}");
 					CiarencesUnbelievableModifications.Logger.LogInfo($"TriggerFloat: {input.TriggerFloat}");
 				}
-			}*/
+			}
 		}
 
 		internal struct ThisIsJustATuple_Really<A, B, C>()

@@ -117,6 +117,8 @@ namespace CiarencesUnbelievableModifications
 
 			HarmonyInstance.PatchAll(typeof(FireArmTweaks.IncrementalSmoothing));
 
+			HarmonyInstance.PatchAll(typeof(TurnScopeDialWithJoystick));
+
 			//HarmonyInstance.PatchAll(typeof(FVRTimedObjectDestructorManager.Patches));
         }
 

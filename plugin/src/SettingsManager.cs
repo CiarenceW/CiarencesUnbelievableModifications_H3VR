@@ -31,6 +31,8 @@ namespace CiarencesUnbelievableModifications
 
 		const string incrementalGunSmoothingCatName = "Incremental Gun Smoothing";
 
+		const string turnScopeDialWithJoystickCatName = "Turn Scope Dial With Joystick";
+
 		internal static bool Verbose
 		{
 			get
@@ -107,6 +109,10 @@ namespace CiarencesUnbelievableModifications
 		internal static ConfigEntry<bool> configEnableIncrementalHandSmoothing;
 
 		internal static ConfigEntry<float> configIncrementalHandSmoothingMaxStrength;
+
+		internal static ConfigEntry<bool> configEnableTurnScopeDialWithJoystick;
+
+		internal static ConfigEntry<float> configTurnScopeDialWithJoystickSensitivity;
 
 		internal static void InitializeAndBindSettings(ConfigFile config)
 		{
@@ -421,6 +427,20 @@ namespace CiarencesUnbelievableModifications
 
 			#endregion
 
+			#region TurnScopeDialWithJoystick
+
+			configEnableTurnScopeDialWithJoystick = config.Bind(turnScopeDialWithJoystickCatName,
+				"EnableTurnScopeDialWithJoystick",
+				false,
+				"Allows you to rotate the scope's dials by using the joystick, instead of with your controller");
+
+			configTurnScopeDialWithJoystickSensitivity = config.Bind(turnScopeDialWithJoystickCatName,
+				"TurnScopeDialWithJoystickSensitivity",
+				.5f,
+				"The sensitivity of the joystick");
+
+			#endregion
+
 			#region experimental
 
 			configEnableSodaliteConsoleColorPatch = config.Bind(experimentalCatName,
@@ -428,7 +448,6 @@ namespace CiarencesUnbelievableModifications
 				false,
 				"Transpiles the Sodalite console so that CUM's custom console colour feature works, currently just recolours the entire console if one of CUM's extensions is used, oops");
 
-			
 			#endregion
 		}
 
