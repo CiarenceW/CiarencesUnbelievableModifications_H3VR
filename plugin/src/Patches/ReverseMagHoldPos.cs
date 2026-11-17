@@ -12,7 +12,7 @@ namespace CiarencesUnbelievableModifications.Patches
         [HarmonyPostfix]
         private static void AddMagazinePostExtenderComponent(FVRFireArmMagazine __instance)
         {
-            if (__instance.ObjectWrapper != null && __instance.ObjectWrapper.ItemID != null && !IsMelonAmmoBoxTeehee(__instance))
+            if (__instance.ObjectWrapper != null && __instance.ObjectWrapper.ItemID != null && !IsMelonAmmoBoxTeehee(__instance) && __instance is not CartridgeBox)
             {
                 __instance.GetOrAddComponent<FVRMagazinePoseExtender>();
             }
