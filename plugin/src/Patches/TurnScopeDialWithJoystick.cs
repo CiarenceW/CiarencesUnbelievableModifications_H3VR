@@ -72,6 +72,11 @@ namespace CiarencesUnbelievableModifications.Patches
 					new CodeInstruction(OpCodes.Callvirt, AccessTools.PropertyGetter(typeof(ConfigEntry<bool>), nameof(ConfigEntry<bool>.Value))),
                     new CodeInstruction(OpCodes.Brfalse_S, isOptionTurnedOffLabel),
 
+					// && !hand.IsInStreamlinedMode
+					new CodeInstruction(OpCodes.Ldarg_1),
+					new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(FVRViveHand), nameof(FVRViveHand.IsInStreamlinedMode))),
+					new CodeInstruction(OpCodes.Brtrue_S, isOptionTurnedOffLabel),
+
 					// 		float num = 0;
 					new CodeInstruction(OpCodes.Ldc_R4, 0.0f),
 					new CodeInstruction(OpCodes.Stloc_3),
@@ -135,8 +140,6 @@ namespace CiarencesUnbelievableModifications.Patches
                 }
             }
 
-            codeMatcher.Print();
-
             return codeMatcher.InstructionEnumeration();
         }
 
@@ -170,6 +173,11 @@ namespace CiarencesUnbelievableModifications.Patches
 					new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(SettingsManager), nameof(SettingsManager.configEnableTurnScopeDialWithJoystick))),
 					new CodeInstruction(OpCodes.Callvirt, AccessTools.PropertyGetter(typeof(ConfigEntry<bool>), nameof(ConfigEntry<bool>.Value))),
                     new CodeInstruction(OpCodes.Brfalse_S, isOptionTurnedOffLabel),
+
+					// && !hand.IsInStreamlinedMode
+					new CodeInstruction(OpCodes.Ldarg_1),
+					new CodeInstruction(OpCodes.Ldfld, AccessTools.Field(typeof(FVRViveHand), nameof(FVRViveHand.IsInStreamlinedMode))),
+					new CodeInstruction(OpCodes.Brtrue_S, isOptionTurnedOffLabel),
 
 					// 		float num = 0;
 					new CodeInstruction(OpCodes.Ldc_R4, 0.0f),
@@ -236,8 +244,6 @@ namespace CiarencesUnbelievableModifications.Patches
                     codeMatcher.Labels.Add(skipOver);
                 }
             }
-
-            codeMatcher.Print();
 
             return codeMatcher.InstructionEnumeration();
         }
